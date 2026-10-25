@@ -50,14 +50,55 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Pins the exact Gradle version the project is known to work with.
+      # validate-wrappers is off on purpose: this project deliberately ships no
+      # gradle/wrapper/gradle-wrapper.jar, and a half-present wrapper makes the
+      # action stop before the build even starts.
       - name: Install Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+          validate-wrappers: false
 
-      - name: Build the APK
+      - name: Show which tools are being used
         working-directory: ${{ steps.find.outputs.dir }}
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          java -version
+          gradle --version
+
+      # tee + pipefail keeps the real exit code while also leaving build.log
+      # behind, so a failed run still produces something we can read.
+      - name: Build the APK
+        id: build
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace --warning-mode all 2>&1 | tee build.log
+
+      - name: Keep the build log, pass or fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ${{ steps.find.outputs.dir }}/build.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Explain what to do if it failed
+        if: failure()
+        run: |
+          {
+            echo "### The build did not finish"
+            echo ""
+            echo "Nothing you did wrong - the project hit an error."
+            echo ""
+            echo "1. Above, open the red step named **Build the APK**."
+            echo "2. Copy roughly the last 30 lines."
+            echo "3. Send them over and it will be fixed."
+            echo ""
+            echo "The complete log is also saved as the **build-log** file"
+            echo "in the Artifacts box at the bottom of this page."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Give the APK a friendly name
         working-directory: ${{ steps.find.outputs.dir }}

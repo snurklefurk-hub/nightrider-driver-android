@@ -1,1 +1,26 @@
-{"status":"unverified","codeRevision":"ef61e629aabea1c6ee2ad4f2564c0cd1ca0973ef45af60cb3f5a9425c8039916","reason":"This code revision has no matching host-run behavioral check.","historicalReports":[{"path":"nightrider-driver-android/README.md","sha256":"500101f61b70dba8a0ca54af882aa644c1cfb850373bc66f4eff20a9b2dfead8"},{"path":"nightrider-driver-android/GET-THE-APK.md","sha256":"83949a4d4e48da59470f2a9450b90ef8e113bdbb9e1017c4f043733f38392423"}]}
+{
+  "status": "unverified",
+  "codeRevision": "a85673bad724fd062b2a838eca82316584f632fe4a5ff79edd89995781ead1bf",
+  "reason": "This code revision has no matching host-run behavioral check.",
+  "historicalReports": [
+    {
+      "path": "nightrider-driver-android/README.md",
+      "sha256": "e5f19b97665ffdb7cf047fb4399ecd38c51d2a7621872052131ee080d62d9ced"
+    },
+    {
+      "path": "nightrider-driver-android/GET-THE-APK.md",
+      "sha256": "d151fa908af4f349b25f17bb8acf8444ddfe9aa14cce7d7ee7cacbea3f7aed8b"
+    }
+  ],
+  "checksRunHere": [
+    "validate_android_project.py - structural checks over 15 XML files: passed",
+    "Kotlin R.* reference resolution: 0 unresolved (12 ids, 22 strings, 10 colors, 4 styles)",
+    "XML @type/name reference resolution in layouts and manifest: 0 unresolved",
+    "launcher PNG integrity (Pillow verify): all valid",
+    ".github/workflows/build-apk.yml: no tab characters, consistent indentation"
+  ],
+  "notRunHere": [
+    "gradle assembleDebug - not possible in this sandbox (no JDK, Gradle or Android SDK, no network)",
+    "APK install or runtime behaviour on a real device"
+  ]
+}

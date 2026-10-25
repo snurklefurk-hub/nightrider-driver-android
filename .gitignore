@@ -9,3 +9,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# build output
+build.log
+out/

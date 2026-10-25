@@ -11,18 +11,24 @@ Time needed: about 10 minutes, plus ~4 minutes of waiting for the build.
 
 ## Step 1 — Unzip the project
 
-Unzip `nightrider-driver-android.zip`. You should see:
+Unzip `nightrider-driver-android.zip`. You get one folder called
+`nightrider-driver-android`. Open it — inside you should see:
 
 ```
 settings.gradle
 build.gradle
 gradle.properties
-gradle/          (folder)
-app/             (folder)
+app/             (folder - the app itself)
 .github/         (folder - the build recipe)
 README.md
+GET-THE-APK.md
 VERIFICATION.json
 ```
+
+There is deliberately **no** `gradle/wrapper` folder. The build computer installs
+Gradle itself, and a half-finished wrapper file would stop the build before it
+starts. Everything else is already in place — you do not need to create or edit
+any file.
 
 ## Step 2 — Put it in a GitHub repository
 
@@ -38,8 +44,9 @@ VERIFICATION.json
 On the repository page:
 
 1. Click **Add file ▸ Upload files**.
-2. Drag in everything from inside the unzipped folder — `settings.gradle`,
-   `build.gradle`, `gradle.properties`, and the `gradle`, `app` and `.github` folders.
+2. Open the unzipped `nightrider-driver-android` folder, then drag **the things
+   inside it** (not the folder itself) into the upload page — `settings.gradle`,
+   `build.gradle`, `gradle.properties`, and the `app` and `.github` folders.
 3. Click **Commit changes**.
 
 **One catch about the `.github` folder:** folders whose name starts with a dot are
@@ -103,10 +110,19 @@ separate signed build and a Google Play developer account.
 
 ## If the build fails
 
-1. Open the **Actions** tab, click the red run.
-2. Click the step with the red X (usually **Build the APK**).
-3. Copy the last 20 or so lines of the log and send them to me — I will fix the
-   project and you can re-run it.
+A red run is not something you did wrong, and it does not mean starting over. It
+means the project hit an error and I need to see it.
+
+1. Open the **Actions** tab and click the red run.
+2. Click the red step (usually **Build the APK**).
+3. Copy roughly the last 30 lines of that log and send them to me — I will fix the
+   project and you can re-run it with **Run workflow**.
+
+The run page also has a **build-log** file in its Artifacts box at the bottom.
+That is the complete log, so if 30 lines are not enough, send that file instead.
+
+The run page itself now explains this in red at the top, so you do not have to
+remember it.
 
 ## Free minutes
 
