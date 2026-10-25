@@ -8,10 +8,11 @@ import java.security.MessageDigest
  * Local settings for the driver app.
  *
  * The backend has no driver accounts: a driver is identified by the name they
- * type, and the app carries that name on every request. The password in the
- * sign-in card is therefore a local device PIN that locks the signed-in
- * session on this phone. It is stored only as a salted SHA-256 digest, never
- * in plain text, and can be reset from Settings if it is forgotten.
+ * type, and the app carries that name on every request.
+ *
+ * Sign-in is currently a placeholder: any name is accepted and the password is
+ * not checked, so nothing is stored for it and the PIN helpers below are kept
+ * only for a later, real sign-in. Only the driver name is persisted.
  */
 class Prefs(ctx: Context) {
 

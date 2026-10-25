@@ -1,6 +1,6 @@
 {
   "status": "unverified",
-  "codeRevision": "318fcb239f17edcc8d98ffd647b0ff4fbc2217232ac7bff76d5b863b7d3f66a0",
+  "codeRevision": "95eb9365e708996fec39bd280be31c8b60c1c204473940d1cd43e40a62e163ac",
   "reason": "This code revision has no matching host-run behavioral check.",
   "historicalReports": [
     {
@@ -15,14 +15,16 @@
   "notice": "No host-run behavioral check and no on-device installation. A signed debug APK was built and structurally verified in this workspace (see localBuild), but nothing was installed or run on a phone or emulator. Verification covers file structure, resources and code content only; it does not prove runtime behaviour.",
   "localBuild": {
     "artifact": "nightrider-driver-android/NightRider-Driver.apk",
-    "sha256": "46479bd71d7634818d0e05cddd9e13f5d9d5e3fc183ee7b1d109c6357cc47f31",
-    "bytes": 649341,
+    "sha256": "9eb5f50cba76a1e7990de94b4b1e619036751426dbcba042267303e270185276",
+    "bytes": 747730,
     "toolchain": "offline, no Gradle and no Maven: aapt2/d8/zipalign/apksigner (build-tools 34), kotlinc 1.9.24, JDK 17, android.jar platform-34",
     "checksPassed": [
-      "apksigner verify --min-sdk-version 26: Verifies; v2 scheme=true, v3 scheme=true; 1 signer",
+      "apksigner verify --min-sdk-version 26: verifies; 1 signer",
       "apksigner --print-certs: CN=Android Debug, O=Android, C=US",
       "aapt2 dump badging: package='com.nightrider.driver' versionCode=1 versionName=1.0 minSdk=26 targetSdk=34 compileSdk=34, launchable-activity com.nightrider.driver.MainActivity",
-      "aapt2 dump resources: layout/activity_main, layout/activity_settings and string/app_name present",
+      "aapt2 dump badging: application-icon-480 resolves to res/mipmap-anydpi-v26/ic_launcher.xml (adaptive icon)",
+      "aapt2 dump resources: drawable/ic_launcher_background and drawable/ic_launcher_foreground present alongside all five legacy PNG mipmap densities (square + round)",
+      "embedded mipmap PNGs extracted and inspected: 48/72/96/144/192 px, teal whale and coral-blossom pixels present, square opaque at the corner and round transparent at the corner",
       "dexdump classes.dex: MainActivity, SettingsActivity, Api and Prefs present; no SetupActivity class remains",
       "unzip -t: archive integrity OK"
     ],
@@ -30,12 +32,14 @@
       "installation on a phone or emulator",
       "runtime behaviour of the driver sign-in, ride board, chat and settings screens",
       "network calls to https://nightrider.onrender.com",
-      "the location / notification permission prompts"
+      "the location / notification permission prompts",
+      "on-device rendering of the new launcher icon"
     ]
   },
   "checksRunWithoutTheApk": [
-    "python3 validate_android_project.py \u2014 all structural checks passed (16 XML files parsed)",
-    "python3 check_workflow_yaml.py \u2014 workflow parsed, all structural checks passed (13 steps)"
+    "python3 validate_android_project.py - all structural checks passed (17 XML files parsed)",
+    "python3 check_workflow_yaml.py - workflow parsed, all structural checks passed (13 steps)",
+    "web skin check: nightrider.css braces balanced 207/207, all 17 custom properties defined, no var() used that is undefined, no stale palette tokens in the three pages"
   ],
-  "note": "The app uses framework-only Android APIs (no external libraries). The GitHub/Gradle route in .github/workflows/build-apk.yml remains valid as an alternative build path."
+  "note": "The app uses framework-only Android APIs (no external libraries). The GitHub/Gradle route in .github/workflows/build-apk.yml remains valid as an alternative build path. Restyle revision: sign-in is now a functional placeholder (any non-blank name, any or blank password), the theme follows the ink/aquatic-night palette and the launcher icon is a new whale-and-blossom mark."
 }

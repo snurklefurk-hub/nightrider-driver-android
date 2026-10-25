@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon background: the same ink-wash gradient the legacy PNG uses.
+     Luminous aquatic teal blooms from the top-left; coral warmth from the
+     top-right. Sized for the 108dp adaptive viewport. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#0B2130"
+                android:centerColor="#0D2436"
+                android:endColor="#07131B" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="62%p"
+                android:centerX="0.14"
+                android:centerY="0.0"
+                android:startColor="#551E5568"
+                android:endColor="#001E5568" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="52%p"
+                android:centerX="0.9"
+                android:centerY="0.06"
+                android:startColor="#3DE791B8"
+                android:endColor="#00E791B8" />
+        </shape>
+    </item>
+</layer-list>

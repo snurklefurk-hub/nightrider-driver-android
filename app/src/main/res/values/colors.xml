@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Nightwave palette, copied from the site's nightrider.css. -->
+<!-- "Ink & lumen" palette, copied from the site's nightrider.css: diffused night
+     ink, luminous aquatic teal, coral-blossom pink and warm lamp gold. -->
 <resources>
-    <color name="void_night">#0A0F1D</color>
-    <color name="indigo">#120A2A</color>
-    <color name="plum">#C464B1</color>
-    <color name="rose">#C05984</color>
-    <color name="cyan">#00F0FF</color>
-    <color name="ice">#E0F7FF</color>
-    <color name="mist">#8A9CC0</color>
+    <color name="void_night">#07131B</color>
+    <color name="indigo">#0D2436</color>
+    <color name="plum">#E791B8</color>
+    <color name="rose">#E08A6B</color>
+    <color name="cyan">#7FE6D2</color>
+    <color name="ice">#E8F5F2</color>
+    <color name="mist">#8BA7B6</color>
+    <color name="lamp">#F2C46B</color>
 
-    <color name="panel">#D1120A2A</color>
-    <color name="line_cyan">#5900F0FF</color>
-    <color name="launcher_background">#120A2A</color>
+    <color name="panel">#D10D2436</color>
+    <color name="line_cyan">#597FE6D2</color>
+    <color name="launcher_background">#0D2436</color>
 </resources>

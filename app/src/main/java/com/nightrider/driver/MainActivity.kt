@@ -205,21 +205,17 @@ class MainActivity : Activity() {
         driverLine.text = getString(R.string.signed_in_as, name)
     }
 
+    /**
+     * Placeholder sign-in: any driver name is accepted and the password field is
+     * not checked at all — blank or any value works. No PIN is stored, so this
+     * only records the name and confirms the server can reach the driver.
+     */
     private fun attemptLogin() {
         val name = nameInput.text.toString().trim()
-        val pin = passInput.text.toString()
         loginError.text = ""
 
-        if (name.length < 2) {
+        if (name.isEmpty()) {
             loginError.text = getString(R.string.err_name)
-            return
-        }
-        if (pin.length < 4) {
-            loginError.text = getString(R.string.err_password)
-            return
-        }
-        if (prefs.hasPin(name) && !prefs.pinMatches(name, pin)) {
-            loginError.text = getString(R.string.err_wrong_pin)
             return
         }
 
@@ -232,7 +228,6 @@ class MainActivity : Activity() {
                     JSONObject().put("name", name).put("status", "available")
                 )
                 main.post {
-                    if (!prefs.hasPin(name)) prefs.setPin(name, pin)
                     prefs.login(name)
                     passInput.setText("")
                     loginButton.isEnabled = true
