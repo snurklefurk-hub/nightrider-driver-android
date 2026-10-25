@@ -25,21 +25,22 @@
     <string name="field_pickup">Pickup</string>
     <string name="field_dropoff">Drop off</string>
     <string name="action_accept">Accept ride</string>
-    <string name="action_cancel_ride">Cancel ride</string>
-    <string name="action_message_rider">Message rider</string>
+    <string name="action_cancel_ride">Release ride to Dispatch</string>
+    
     <string name="ride_chat_title">Ride %1$s messages</string>
     <string name="ride_chat_note">Messages in this conversation are also visible to Dispatch.</string>
     <string name="ride_chat_hint">Message the rider</string>
     <string name="chat_you">You</string>
-    <string name="cancel_ride_title">Cancel this ride?</string>
-    <string name="cancel_ride_message">Dispatch and the rider will be notified.</string>
-    <string name="cancel_ride_done">Ride cancelled. Dispatch and the rider have been notified.</string>
+    <string name="cancel_ride_title">Release this ride?</string>
+    <string name="cancel_ride_message">This returns the active request to Dispatch’s open queue. The rider’s request stays active.</string>
+    <string name="cancel_ride_done">Ride returned to Dispatch’s open queue.</string>
     <string name="action_rate">Rate rider</string>
     <string name="rate_title">Rate this rider</string>
     <string name="rate_saved">Saved a %1$d star rating.</string>
 
     <!-- Team text -->
     <string name="chat_hint">Message dispatch</string>
+    <string name="chat_team">Team chat</string>
     <string name="chat_send">Send</string>
     <string name="chat_private_short">Private</string>
     <string name="chat_private">Private to dispatch</string>
