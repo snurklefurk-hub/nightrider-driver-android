@@ -1,1 +1,35 @@
-{"status":"unverified","codeRevision":"d13d533fc914eb3547b97fb98f880016cbca72761843d97c99d7967f347ac0f1","reason":"This code revision has no matching host-run behavioral check.","historicalReports":[{"path":"nightrider-driver-android/README.md","sha256":"a6c5369d4a314a8fc84a840ee692c6de728dcf11781047ceba0f85fd161408f0"},{"path":"nightrider-driver-android/GET-THE-APK.md","sha256":"3985a22e8cb4cdb0338efdae4c4c20ba50d44dc6ed036a205904380d08de38b2"}]}
+{
+  "status": "unverified",
+  "codeRevision": "6f452b64e797b7e6eedb566d39ae5e2c12919e3ec3f6d47aedd71185c8375588",
+  "reason": "This code revision has no matching host-run behavioral check.",
+  "historicalReports": [
+    {
+      "path": "nightrider-driver-android/README.md",
+      "sha256": "a6c5369d4a314a8fc84a840ee692c6de728dcf11781047ceba0f85fd161408f0"
+    },
+    {
+      "path": "nightrider-driver-android/GET-THE-APK.md",
+      "sha256": "3985a22e8cb4cdb0338efdae4c4c20ba50d44dc6ed036a205904380d08de38b2"
+    }
+  ],
+  "notice": "No host-run behavioral check and no on-device installation. A signed debug APK was built and structurally verified in this workspace, but nothing was installed or run on a phone or emulator. Verification covers file structure, resources, bytecode content and a local structural test suite only; it does not prove runtime behaviour.",
+  "localBuild": {
+    "artifact": "nightrider-driver-android/NightRider-Driver.apk",
+    "sha256": "59e0767f93dcd23bbead02f63f09b3ad80d1cc78667fe88e43695aab10a199a4",
+    "bytes": 755922,
+    "checksPassed": [
+      "apksigner verify --min-sdk-version 26: verifies; 1 signer",
+      "aapt2 dump badging: package='com.nightrider.driver' versionCode=1 versionName=1.0 minSdk=26 targetSdk=34 compileSdk=34, launchable-activity com.nightrider.driver.MainActivity",
+      "aapt2 dump badging: application-icon-480 resolves to res/mipmap-anydpi-v26/ic_launcher.xml (adaptive icon)",
+      "dexdump classes.dex: MainActivity, SettingsActivity, Api and Prefs present",
+      "unzip -t: archive integrity OK"
+    ],
+    "notChecked": [
+      "installation on a phone or emulator",
+      "runtime behaviour of the driver sign-in, ride board, chat and settings screens",
+      "network calls to https://nightrider.onrender.com",
+      "on-device rendering of the new launcher icon"
+    ]
+  },
+  "tests": "nightrider-driver-android/tests/test_package.py - 17 local structural tests (manifest, Gradle config, palette, adaptive-icon wiring, PNG densities, APK archive contents). These inspect the shipped bytes only; they do not execute the app."
+}
