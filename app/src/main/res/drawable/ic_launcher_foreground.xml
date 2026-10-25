@@ -1,51 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive launcher foreground: a luminous whale drifting over an ink-wash
-     night, with a coral blossom below — the Hiromu。-inspired mark for NightRider. -->
+<!-- Adaptive launcher foreground — "Verdant Chrome" mark for NightRider:
+     a chrome-lit whale gliding over a deep-emerald night, with a gold-cored
+     blossom below. Cyan and silver highlights read as reflective chrome. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Soft aquatic halo -->
+    <!-- Emerald/cyan halo -->
     <path
-        android:fillColor="#247FE6D2"
+        android:fillColor="#332EE6A0"
         android:pathData="M54,54 a34,34 0 1,0 0.1,0 z" />
 
-    <!-- Whale body -->
+    <!-- Whale body, chrome-cyan -->
     <path
-        android:fillColor="#7FE6D2"
+        android:fillColor="#C9D7E8"
         android:pathData="M36,50 a24,14 0 1,0 48,0 a24,14 0 1,0 -48,0 z" />
 
-    <!-- Tail flukes -->
+    <!-- Whale body inner tint -->
     <path
-        android:fillColor="#7FE6D2"
+        android:fillColor="#2FE9FF"
+        android:pathData="M40,50 a20,11 0 1,0 40,0 a20,11 0 1,0 -40,0 z" />
+
+    <!-- Tail flukes, emerald -->
+    <path
+        android:fillColor="#2EE6A0"
         android:pathData="M79,50 L97,38 L91,50 L97,62 Z" />
 
-    <!-- Pectoral fin -->
+    <!-- Pectoral fin, chrome silver -->
     <path
-        android:fillColor="#5FCFBC"
+        android:fillColor="#C9D7E8"
         android:pathData="M48,57 C54,67 63,67 67,61 C60,62 54,60 48,57 Z" />
 
-    <!-- Coral blossom petals -->
+    <!-- Blossom petals, emerald -->
     <path
-        android:fillColor="#E791B8"
+        android:fillColor="#2EE6A0"
         android:pathData="M36,65 a4.5,4.5 0 1,0 0.1,0 z" />
     <path
-        android:fillColor="#E791B8"
+        android:fillColor="#2EE6A0"
         android:pathData="M28,71 a4.5,4.5 0 1,0 0.1,0 z" />
     <path
-        android:fillColor="#E791B8"
+        android:fillColor="#2EE6A0"
         android:pathData="M44,71 a4.5,4.5 0 1,0 0.1,0 z" />
     <path
-        android:fillColor="#E791B8"
+        android:fillColor="#2EE6A0"
         android:pathData="M31,80 a4.5,4.5 0 1,0 0.1,0 z" />
     <path
-        android:fillColor="#E791B8"
+        android:fillColor="#2EE6A0"
         android:pathData="M41,80 a4.5,4.5 0 1,0 0.1,0 z" />
 
-    <!-- Blossom heart, warm lamp gold -->
+    <!-- Blossom heart, warm gold -->
     <path
-        android:fillColor="#F2C46B"
+        android:fillColor="#FFC36B"
         android:pathData="M36,72 a3.2,3.2 0 1,0 0.1,0 z" />
 </vector>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive-icon background: the same ink-wash gradient the legacy PNG uses.
-     Luminous aquatic teal blooms from the top-left; coral warmth from the
+<!-- Adaptive-icon background — "Verdant Chrome": deep-emerald night base lit by
+     a cyan chrome bloom from the top-left and an emerald route glow from the
      top-right. Sized for the 108dp adaptive viewport. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
@@ -8,9 +8,9 @@
             <gradient
                 android:type="linear"
                 android:angle="270"
-                android:startColor="#0B2130"
-                android:centerColor="#0D2436"
-                android:endColor="#07131B" />
+                android:startColor="#123230"
+                android:centerColor="#0C2426"
+                android:endColor="#08171A" />
         </shape>
     </item>
     <item>
@@ -20,8 +20,8 @@
                 android:gradientRadius="62%p"
                 android:centerX="0.14"
                 android:centerY="0.0"
-                android:startColor="#551E5568"
-                android:endColor="#001E5568" />
+                android:startColor="#552FE9FF"
+                android:endColor="#002FE9FF" />
         </shape>
     </item>
     <item>
@@ -31,8 +31,8 @@
                 android:gradientRadius="52%p"
                 android:centerX="0.9"
                 android:centerY="0.06"
-                android:startColor="#3DE791B8"
-                android:endColor="#00E791B8" />
+                android:startColor="#3D2EE6A0"
+                android:endColor="#002EE6A0" />
         </shape>
     </item>
 </layer-list>
