@@ -110,13 +110,13 @@ class PaletteTests(unittest.TestCase):
 
     def test_verdant_chrome_palette_values(self):
         expected = {
-            "void_night": "#08171A",
-            "launcher_background": "#08171A",
+            "void_night": "#06131A",
+            "launcher_background": "#06131A",
             "plum": "#2EE6A0",
             "cyan": "#2FE9FF",
-            "rose": "#2FE9FF",
-            "ice": "#C9D7E8",
-            "mist": "#8FB0A6",
+            "rose": "#FF6F91",
+            "ice": "#F3FDFB",
+            "mist": "#8FAEB3",
             "lamp": "#FFC36B",
         }
         for name, value in expected.items():

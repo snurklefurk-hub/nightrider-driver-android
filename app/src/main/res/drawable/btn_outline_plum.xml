@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Blossom outline button — used for the secondary action, like the site. -->
+<!-- Emerald outline button — used for the secondary action, like the site. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#33E791B8" />
+            <solid android:color="#332EE6A0" />
             <stroke android:width="1dp" android:color="@color/plum" />
             <corners android:radius="10dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#1AE791B8" />
-            <stroke android:width="1dp" android:color="#80E791B8" />
+            <solid android:color="#1A2EE6A0" />
+            <stroke android:width="1dp" android:color="#802EE6A0" />
             <corners android:radius="10dp" />
         </shape>
     </item>

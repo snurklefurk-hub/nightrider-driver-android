@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "Verdant Chrome" palette (AB.7): deep-emerald night foundation with cyan
-     chrome highlights, an emerald route accent, cool silver and warm gold. -->
+<!-- Blended Tidal Chrome + Emerald Night palette. -->
 <resources>
-    <color name="void_night">#08171A</color>
-    <color name="indigo">#123230</color>
+    <color name="void_night">#06131A</color>
+    <color name="indigo">#13282E</color>
     <color name="plum">#2EE6A0</color>
-    <color name="rose">#2FE9FF</color>
+    <color name="rose">#FF6F91</color>
     <color name="cyan">#2FE9FF</color>
-    <color name="ice">#C9D7E8</color>
-    <color name="mist">#8FB0A6</color>
+    <color name="ice">#F3FDFB</color>
+    <color name="mist">#8FAEB3</color>
     <color name="lamp">#FFC36B</color>
 
-    <color name="panel">#D1123230</color>
+    <color name="panel">#D113282E</color>
     <color name="line_cyan">#592FE9FF</color>
-    <color name="launcher_background">#08171A</color>
+    <color name="launcher_background">#06131A</color>
 </resources>

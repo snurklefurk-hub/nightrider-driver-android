@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ink-wash backdrop: deep night ink warming to an aquatic teal glow, with a
-     coral blossom tint bleeding in from the top-right. -->
+<!-- Tidal Emerald night backdrop with a soft emerald-cyan glow. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#0B2130"
+                android:startColor="#164343"
                 android:centerColor="@color/indigo"
                 android:endColor="@color/void_night" />
         </shape>
@@ -15,8 +14,8 @@
         <shape android:shape="rectangle">
             <gradient
                 android:angle="225"
-                android:startColor="#33E791B8"
-                android:endColor="#00E791B8" />
+                android:startColor="#332FE9FF"
+                android:endColor="#002FE9FF" />
         </shape>
     </item>
 </layer-list>
