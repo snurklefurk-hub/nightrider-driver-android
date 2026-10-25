@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NightRider Driver</string>
+    <string name="brand_night">Night</string>
+    <string name="brand_rider">Rider</string>
+
+    <string name="connecting">Connecting to your driver board…</string>
+
+    <string name="error_title">Cannot reach your NightRider site</string>
+    <string name="error_body">The app could not load:\n%1$s/driver.html\n\nCheck the address, and make sure the phone has internet. On Render\'s free plan the site sleeps after a while — the first load can take about 30 seconds.</string>
+    <string name="error_retry">Try again</string>
+    <string name="error_change">Change address</string>
+
+    <string name="setup_title">Server settings</string>
+    <string name="setup_heading">NightRider address</string>
+    <string name="setup_help">This is the web address of your own NightRider site — the same link you open on a computer, for example https://nightrider-xxxx.onrender.com</string>
+    <string name="setup_hint">https://your-site.onrender.com</string>
+    <string name="setup_awake">Keep the screen on while the app is open</string>
+    <string name="setup_save">Save and open driver board</string>
+    <string name="setup_test">Test address</string>
+    <string name="setup_need_address">Type your NightRider address first.</string>
+    <string name="setup_testing">Checking the address…</string>
+    <string name="setup_ok">That address works. Tap Save to start driving.</string>
+    <string name="setup_bad_code">The site answered with an error (%1$d). Double-check the address.</string>
+    <string name="setup_unreachable">Could not reach that address. Check the spelling and your internet connection.</string>
+
+    <string name="shortcut_server_short">Server</string>
+    <string name="shortcut_server_long">Server settings</string>
+</resources>

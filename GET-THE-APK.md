@@ -1,0 +1,106 @@
+# Get the APK without touching Android Studio
+
+You do **not** need Android Studio on your computer. GitHub has free build
+computers: you drop the project in, press one button, and it hands you a finished
+`NightRider-Driver.apk` you can send to a phone. That is exactly what the file
+`.github/workflows/build-apk.yml` in this project is for.
+
+Time needed: about 10 minutes, plus ~4 minutes of waiting for the build.
+
+---
+
+## Step 1 — Unzip the project
+
+Unzip `nightrider-driver-android.zip`. You should see:
+
+```
+settings.gradle
+build.gradle
+gradle.properties
+gradle/          (folder)
+app/             (folder)
+.github/         (folder - the build recipe)
+README.md
+VERIFICATION.json
+```
+
+## Step 2 — Put it in a GitHub repository
+
+**If you already have a GitHub account** (you do, for the website), you can either:
+
+- **New repo (recommended, cleanest):** github.com → **+** (top right) →
+  **New repository** → name it `nightrider-driver-app` → **Create repository**.
+- **Or reuse the website repo:** drop this project in as a sub-folder named
+  `android`. The build recipe finds the project wherever it is, so both work.
+
+## Step 3 — Upload the files
+
+On the repository page:
+
+1. Click **Add file ▸ Upload files**.
+2. Drag in everything from inside the unzipped folder — `settings.gradle`,
+   `build.gradle`, `gradle.properties`, and the `gradle`, `app` and `.github` folders.
+3. Click **Commit changes**.
+
+**One catch about the `.github` folder:** folders whose name starts with a dot are
+hidden by Finder/Explorer, and drag-and-drop sometimes skips them. If it did not
+upload, add it by hand — it is only one small file:
+
+1. On the repo page: **Add file ▸ Create new file**.
+2. In the filename box type exactly: `.github/workflows/build-apk.yml`
+   (typing the slashes creates the folders).
+3. Paste in the whole contents of that file from the unzipped project, then
+   **Commit changes**.
+
+## Step 4 — Press the button
+
+1. Open the **Actions** tab of the repository.
+2. On the left, click **Build driver app APK**.
+3. Click **Run workflow ▸ Run workflow**.
+4. Wait ~4 minutes. A green tick means the APK is ready. (It also runs by itself
+   every time you change a project file.)
+
+## Step 5 — Download the APK
+
+Two ways, either is fine:
+
+- **Easiest to share:** repo home page → right-hand sidebar → **Releases** →
+  the newest one → tap **NightRider-Driver.apk**. That link can be sent straight
+  to a driver.
+- **From the build run:** Actions → the green run → scroll to **Artifacts** →
+  download `NightRider-Driver-APK` (that arrives as a small zip; unzip it to get the APK).
+
+## Step 6 — Install it on a phone
+
+1. Get the APK onto the phone: email it to yourself, put it in Google Drive, or
+   copy it over USB.
+2. Tap the file on the phone. Android will say the source isn't allowed — tap
+   **Settings** and switch on **Allow from this source**, then tap **Install**.
+   (It may also warn that the app is from an unknown developer; that is normal for
+   an app that isn't in the Play Store.)
+3. Open **NightRider Driver**, type your NightRider web address, tap
+   **Test connection**, then **Save**. The driver page opens.
+
+That APK is a **debug build** — perfectly fine for installing on your own phones
+and your drivers' phones. If you ever want it in the Play Store, that needs a
+separate signed build and a Google Play developer account.
+
+## If the build fails
+
+1. Open the **Actions** tab, click the red run.
+2. Click the step with the red X (usually **Build the APK**).
+3. Copy the last 20 or so lines of the log and send them to me — I will fix the
+   project and you can re-run it.
+
+## Free minutes
+
+Builds run on GitHub's computers. Public repositories get unlimited free build
+minutes; private repositories get 2,000 free minutes a month, and each build here
+uses about 4–5 of them — so this is effectively free either way.
+
+## If you would rather not use GitHub
+
+Any computer with Android Studio installed can build it instead: open the project,
+then **Build ▸ Build Bundle(s) / APK(s) ▸ Build APK(s)**. The APK lands at
+`app/build/outputs/apk/debug/app-debug.apk`. The README has the longer version of
+that route.

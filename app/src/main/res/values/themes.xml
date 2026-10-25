@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.NightRider" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/cyan</item>
+        <item name="colorPrimaryDark">@color/void_night</item>
+        <item name="colorAccent">@color/plum</item>
+        <item name="android:textColorPrimary">@color/ice</item>
+        <item name="android:textColorSecondary">@color/mist</item>
+        <item name="android:windowBackground">@drawable/bg_nightwave</item>
+        <item name="android:statusBarColor">@color/void_night</item>
+        <item name="android:navigationBarColor">@color/void_night</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- The page is already dark; stop Android from darkening it twice. -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <style name="NrLabel">
+        <item name="android:textColor">@color/cyan</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.14</item>
+    </style>
+
+    <style name="NrButton" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_outline</item>
+        <item name="android:textColor">@color/cyan</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="NrButton.Alt">
+        <item name="android:background">@drawable/btn_outline_plum</item>
+        <item name="android:textColor">@color/plum</item>
+    </style>
+
+</resources>
