@@ -25,6 +25,10 @@
     <string name="field_pickup">Pickup</string>
     <string name="field_dropoff">Drop off</string>
     <string name="action_accept">Accept ride</string>
+    <string name="action_cancel_ride">Cancel ride</string>
+    <string name="cancel_ride_title">Cancel this ride?</string>
+    <string name="cancel_ride_message">Dispatch and the rider will be notified.</string>
+    <string name="cancel_ride_done">Ride cancelled. Dispatch and the rider have been notified.</string>
     <string name="action_rate">Rate rider</string>
     <string name="rate_title">Rate this rider</string>
     <string name="rate_saved">Saved a %1$d star rating.</string>
