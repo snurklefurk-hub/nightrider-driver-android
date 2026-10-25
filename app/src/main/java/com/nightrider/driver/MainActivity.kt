@@ -445,6 +445,9 @@ class MainActivity : Activity() {
             if (status == "completed") {
                 row.addView(actionButton(getString(R.string.action_rate)) { rateDialog(rideId) })
             }
+            if (status != "completed" && status != "cancelled") {
+                row.addView(actionButton(getString(R.string.action_cancel_ride)) { confirmCancelRide(rideId) })
+            }
         }
         if (row.childCount > 0) card.addView(row)
 
@@ -528,6 +531,30 @@ class MainActivity : Activity() {
                 main.post {
                     ridesSignature = ""
                     boardStatus.text = ""
+                    refreshRides()
+                }
+            } catch (e: Exception) {
+                main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
+            }
+        }
+    }
+
+    private fun confirmCancelRide(rideId: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.cancel_ride_title)
+            .setMessage(R.string.cancel_ride_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.action_cancel_ride) { _, _ -> cancelRide(rideId) }
+            .show()
+    }
+
+    private fun cancelRide(rideId: String) {
+        io.execute {
+            try {
+                Api.post("/api/rides/" + Api.enc(rideId) + "/cancel", JSONObject())
+                main.post {
+                    boardStatus.text = getString(R.string.cancel_ride_done)
+                    ridesSignature = ""
                     refreshRides()
                 }
             } catch (e: Exception) {
