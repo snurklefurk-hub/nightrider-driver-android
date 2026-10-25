@@ -56,9 +56,25 @@ upload, add it by hand — it is only one small file:
 
 1. Open the **Actions** tab of the repository.
 2. On the left, click **Build driver app APK**.
-3. Click **Run workflow ▸ Run workflow**.
+3. Click **Run workflow ▸ Run workflow** (a button at the top right of that page).
 4. Wait ~4 minutes. A green tick means the APK is ready. (It also runs by itself
    every time you change a project file.)
+
+**If there is no "Build driver app APK" in that left-hand list**, the
+`.github/workflows/build-apk.yml` file is not in the repo yet — this is the one
+thing that usually gets missed when uploading, because folders whose name starts
+with a dot are hidden. To add it, on the repository page:
+
+1. **Add file ▸ Create new file**.
+2. In the filename box type exactly: `.github/workflows/build-apk.yml`
+   (typing the slashes creates the folders — no need to make them first).
+3. Paste the whole file contents into the big text box.
+4. Click **Commit changes**. The build starts on its own; open **Actions** and it
+   will be at the top. If it does not, refresh the page and use
+   **Run workflow ▸ Run workflow**.
+
+Still nothing in the list? Open **Settings ▸ Actions ▸ General** and make sure
+**Allow all actions and reusable workflows** is selected.
 
 ## Step 5 — Download the APK
 
