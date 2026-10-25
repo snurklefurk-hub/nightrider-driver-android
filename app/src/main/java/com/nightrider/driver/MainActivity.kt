@@ -58,6 +58,7 @@ class MainActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private val ridesBusy = AtomicBoolean(false)
     private val chatBusy = AtomicBoolean(false)
+    private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
     private var shownName = ""
@@ -317,7 +318,8 @@ class MainActivity : Activity() {
                     val ride = all.optJSONObject(i) ?: continue
                     val status = ride.optString("status")
                     val driver = ride.optString("driver")
-                    if (status == "requested" && driver.isBlank()) {
+                    val unassigned = ride.isNull("driver") || driver.isBlank()
+                    if (status == "requested" && unassigned) {
                         open.add(ride)
                     } else if (driver == name) {
                         mine.add(ride)
@@ -688,7 +690,7 @@ class MainActivity : Activity() {
         val name = prefs.driverName
         if (name.isBlank()) return
         val text = chatText.text.toString().trim()
-        if (text.isEmpty()) return
+        if (text.isEmpty() || !chatSending.compareAndSet(false, true)) return
         val priv = chatPrivate.isChecked
         chatSend.isEnabled = false
         io.execute {
@@ -700,11 +702,13 @@ class MainActivity : Activity() {
                 main.post {
                     chatText.setText("")
                     chatSend.isEnabled = true
+                    chatSending.set(false)
                     refreshChat()
                 }
             } catch (e: Exception) {
                 main.post {
                     chatSend.isEnabled = true
+                    chatSending.set(false)
                     boardStatus.text = getString(R.string.action_failed, friendly(e))
                 }
             }
