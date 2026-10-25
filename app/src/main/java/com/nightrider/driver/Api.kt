@@ -17,6 +17,8 @@ class ApiException(val status: Int, message: String) : Exception(message)
  */
 object Api {
 
+    @Volatile var sessionToken: String = ""
+
     fun get(path: String): JSONObject = request("GET", path, null)
 
     fun post(path: String, body: JSONObject): JSONObject = request("POST", path, body)
@@ -32,6 +34,10 @@ object Api {
             useCaches = false
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "NightRiderDriver/1.1 (Android)")
+            if (sessionToken.isNotBlank()) setRequestProperty("Authorization", "Bearer $sessionToken")
+            if (method == "POST" && path == "/api/auth/login") {
+                setRequestProperty("X-NightRider-Client", "android")
+            }
             if (body != null) {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -56,3 +62,4 @@ object Api {
         }
     }
 }
+
