@@ -4,15 +4,13 @@
     <string name="settings">Settings</string>
     <string name="close">Close</string>
 
-    <!-- Sign-in card. Placeholder for now: any name is accepted and the password
-         is not checked, so blank or any value signs in. -->
     <string name="login_label">Driver sign-in</string>
     <string name="login_heading">Sign in to drive</string>
-    <string name="login_help">Type any driver name to continue. The password is a placeholder for now — leave it blank or enter anything.</string>
-    <string name="hint_name">Driver name</string>
-    <string name="hint_password">Password (optional)</string>
+    <string name="login_help">Use the NightRider username and password given to you by dispatch.</string>
+    <string name="hint_name">Username</string>
+    <string name="hint_password">Password</string>
     <string name="login_button">Sign in</string>
-    <string name="err_name">Enter a driver name.</string>
+    <string name="err_credentials">Enter your username and password.</string>
     <string name="err_unreachable">Could not sign in: %1$s</string>
 
     <!-- Driver board -->
@@ -47,6 +45,5 @@
     <string name="not_signed_in">Not signed in</string>
     <string name="action_logout">Log out</string>
     <string name="logout_confirm">Log out of the driver console on this phone?</string>
-    <string name="reset_pin">Forget this sign-in</string>
-    <string name="reset_pin_confirm">Forget the saved driver name on this phone and sign out?</string>
 </resources>
+
