@@ -112,6 +112,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = Prefs(this)
+        Api.sessionToken = prefs.sessionToken
 
         loginScroll = findViewById(R.id.loginScroll)
         nameInput = findViewById(R.id.nameInput)
@@ -158,7 +159,8 @@ class MainActivity : Activity() {
         super.onResume()
         applyKeepAwake()
         val name = prefs.driverName
-        if (name.isBlank()) {
+        if (!prefs.loggedIn) {
+            if (name.isNotBlank()) prefs.logout()
             stopPolling()
             showLogin()
         } else {
@@ -205,30 +207,33 @@ class MainActivity : Activity() {
         driverLine.text = getString(R.string.signed_in_as, name)
     }
 
-    /**
-     * Placeholder sign-in: any driver name is accepted and the password field is
-     * not checked at all — blank or any value works. No PIN is stored, so this
-     * only records the name and confirms the server can reach the driver.
-     */
     private fun attemptLogin() {
-        val name = nameInput.text.toString().trim()
+        val username = nameInput.text.toString().trim()
+        val password = passInput.text.toString()
         loginError.text = ""
 
-        if (name.isEmpty()) {
-            loginError.text = getString(R.string.err_name)
+        if (username.isEmpty() || password.isEmpty()) {
+            loginError.text = getString(R.string.err_credentials)
             return
         }
 
         loginButton.isEnabled = false
         io.execute {
             try {
-                // Confirm the server knows how to reach this driver.
-                Api.post(
-                    "/api/drivers/ping",
-                    JSONObject().put("name", name).put("status", "available")
+                val response = Api.post(
+                    "/api/auth/login",
+                    JSONObject().put("username", username).put("password", password)
                 )
+                val user = response.optJSONObject("user") ?: throw ApiException(401, "Sign-in failed.")
+                if (user.optString("role") != "driver") {
+                    throw ApiException(403, "This account is not a driver account.")
+                }
+                val token = response.optString("token")
+                if (token.isBlank()) throw ApiException(401, "The server did not start a session. Try again.")
+                val displayName = user.optString("display_name", username)
                 main.post {
-                    prefs.login(name)
+                    prefs.login(username, displayName, token)
+                    Api.sessionToken = token
                     passInput.setText("")
                     loginButton.isEnabled = true
                     maybeAskLocation()
@@ -325,7 +330,16 @@ class MainActivity : Activity() {
                 stage = if (live.isEmpty()) "available" else live.last().optString("status", "available")
                 runOnUiThread { renderRides(open, mine) }
             } catch (e: Exception) {
-                runOnUiThread { boardStatus.text = getString(R.string.board_offline, friendly(e)) }
+                runOnUiThread {
+                    if (e is ApiException && e.status == 401) {
+                        prefs.logout()
+                        Api.sessionToken = ""
+                        stopPolling()
+                        showLogin()
+                    } else {
+                        boardStatus.text = getString(R.string.board_offline, friendly(e))
+                    }
+                }
             } finally {
                 ridesBusy.set(false)
             }
@@ -718,3 +732,4 @@ class MainActivity : Activity() {
         else -> e.message ?: e.javaClass.simpleName
     }
 }
+
