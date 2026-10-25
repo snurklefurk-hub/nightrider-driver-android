@@ -8,6 +8,9 @@
 #
 # This file works whether the Android project sits at the top of the repo or in
 # a sub-folder (for example "android/") - it finds settings.gradle itself.
+#
+# If the build fails, the run page's summary shows the last 60 lines of the
+# Gradle log. Copy that block when asking for a fix.
 
 name: Build driver app APK
 
@@ -33,7 +36,7 @@ jobs:
 
     steps:
       - name: Get the project files
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Find the Android project
         id: find
@@ -45,20 +48,49 @@ jobs:
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
       - name: Install Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      # Pins the exact Gradle version the project is known to work with.
-      # validate-wrappers is off on purpose: this project deliberately ships no
-      # gradle/wrapper/gradle-wrapper.jar, and a half-present wrapper makes the
-      # action stop before the build even starts.
+      # Gradle is downloaded straight from gradle.org instead of through a
+      # marketplace action, so there is one less moving part in the build.
+      # 8.7 is the version this project's Android plugin (8.5.2) needs.
       - name: Install Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
-          validate-wrappers: false
+        run: |
+          set -e
+          curl -sSL --retry 3 -o /tmp/gradle.zip \
+            https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q /tmp/gradle.zip -d /opt
+          echo "/opt/gradle-8.7/bin" >> "$GITHUB_PATH"
+
+      - name: Make sure the Android SDK is usable
+        run: |
+          set -e
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then
+            echo "No Android SDK found on this runner." >&2
+            exit 1
+          fi
+          echo "Android SDK: $SDK"
+          echo "Platforms:   $(ls "$SDK/platforms" 2>/dev/null | tr '\n' ' ')"
+          echo "Build tools: $(ls "$SDK/build-tools" 2>/dev/null | tr '\n' ' ')"
+          if [ ! -d "$SDK/platforms/android-34" ]; then
+            echo "android-34 is missing - trying to install it..."
+            SM=$(find "$SDK" -name sdkmanager -type f 2>/dev/null | head -1)
+            if [ -n "$SM" ]; then
+              yes | "$SM" --licenses > /dev/null 2>&1 || true
+              "$SM" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+            fi
+            ls "$SDK/platforms" 2>/dev/null || true
+          fi
+
+      - name: Point Gradle at the Android SDK
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          printf 'sdk.dir=%s\n' "$SDK" > local.properties
+          cat local.properties
 
       - name: Show which tools are being used
         working-directory: ${{ steps.find.outputs.dir }}
@@ -77,54 +109,64 @@ jobs:
 
       - name: Keep the build log, pass or fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-log
           path: ${{ steps.find.outputs.dir }}/build.log
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Explain what to do if it failed
+      # Puts the real Gradle error on the run page, so the reason for a red X
+      # is readable without digging through the step log.
+      - name: Show why it failed
         if: failure()
+        working-directory: ${{ steps.find.outputs.dir }}
         run: |
           {
-            echo "### The build did not finish"
+            echo "## The build did not finish"
             echo ""
             echo "Nothing you did wrong - the project hit an error."
+            echo "Copy the block below and send it over, and it can be fixed."
             echo ""
-            echo "1. Above, open the red step named **Build the APK**."
-            echo "2. Copy roughly the last 30 lines."
-            echo "3. Send them over and it will be fixed."
-            echo ""
-            echo "The complete log is also saved as the **build-log** file"
-            echo "in the Artifacts box at the bottom of this page."
+            echo '```text'
+            tail -60 build.log 2>/dev/null || echo "(no build.log was written)"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Give the APK a friendly name
         working-directory: ${{ steps.find.outputs.dir }}
         run: |
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' -print -quit)
+          test -n "$APK" || { echo "The build produced no APK file."; exit 1; }
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk out/NightRider-Driver.apk
+          cp "$APK" out/NightRider-Driver.apk
           ls -lh out
 
+      # archive:false keeps this a plain .apk download instead of a zip that
+      # has to be opened first.
       - name: Save the APK for download
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: NightRider-Driver-APK
           path: ${{ steps.find.outputs.dir }}/out/NightRider-Driver.apk
+          archive: false
           if-no-files-found: error
           retention-days: 90
 
+      # Uses the gh command that already ships on the runner, so there is no
+      # third-party release action involved. A hiccup here does not fail the
+      # build - the Artifacts download above is the main path.
       - name: Also put the APK on the Releases page
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: driver-app-${{ github.run_number }}
-          name: NightRider Driver app (build ${{ github.run_number }})
-          body: |
-            Installable Android app for NightRider drivers.
+        working-directory: ${{ steps.find.outputs.dir }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "driver-app-${GITHUB_RUN_NUMBER}" \
+            "out/NightRider-Driver.apk#NightRider-Driver.apk" \
+            --title "NightRider Driver app (build ${GITHUB_RUN_NUMBER})" \
+            --notes "Installable Android app for NightRider drivers.
 
-            Tap **NightRider-Driver.apk** below to download it, open it on the
-            phone and allow installing from this source. On first launch, enter
-            your NightRider web address.
-          files: ${{ steps.find.outputs.dir }}/out/NightRider-Driver.apk
-          fail_on_unmatched_files: true
+          Tap NightRider-Driver.apk below to download it, open it on the phone,
+          and allow installing from this source. On first launch, enter your
+          NightRider web address."

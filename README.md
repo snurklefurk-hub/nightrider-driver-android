@@ -27,11 +27,12 @@ The short version:
 
 1. Put this project in a GitHub repository.
 2. **Actions** tab → **Build driver app APK** → **Run workflow**.
-3. After ~4 minutes, download the APK from the run's **Artifacts** box, or from
-   the repository's **Releases** page.
+3. After ~4 minutes, download `NightRider-Driver.apk` from the run's
+   **Artifacts** box, or from the repository's **Releases** page.
 
 The recipe lives in `.github/workflows/build-apk.yml`. It installs Java 17 and
-Gradle 8.7 itself, so nothing needs to be installed on your computer.
+Gradle 8.7 itself, so nothing needs to be installed on your computer. If the
+build fails, the top of the run page shows the last 60 lines of the error.
 
 ### Route 2 — Android Studio, if you happen to have it
 
@@ -85,7 +86,7 @@ your drivers'. A Play Store listing would need a separate signed release build.
 | Test says "Server answered with code 404" | The address is probably missing or has an extra path. It should be the site root, e.g. `https://your-app.onrender.com`. |
 | The page is blank for a while | On a free Render instance the first load after idle can take 30–60 seconds. |
 | Location never asks | The phone must have location switched on. The app asks the first time the page requests your position. |
-| GitHub build shows a red ✗ | Open the run, click the red **Build the APK** step, and send the last ~30 lines. The full log is saved as the **build-log** artifact on that same page. |
+| GitHub build shows a red ✗ | Open the run. The top of the page has a **The build did not finish** block with the last 60 lines of the error — copy that. Otherwise click the red **Build the APK** step and copy the last ~30 lines. The full log is also saved as the **build-log** artifact on the same page. |
 | No "Build driver app APK" in the Actions list | The `.github/workflows/build-apk.yml` file did not make it into the repo. See `GET-THE-APK.md` step 4 for how to add it by hand. |
 | Gradle sync fails in Android Studio | Check the internet connection and try **File ▸ Sync Project with Gradle Files**. Accept its offer to use Gradle **8.7**. |
 

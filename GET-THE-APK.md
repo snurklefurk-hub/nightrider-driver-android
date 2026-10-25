@@ -91,7 +91,9 @@ Two ways, either is fine:
   the newest one → tap **NightRider-Driver.apk**. That link can be sent straight
   to a driver.
 - **From the build run:** Actions → the green run → scroll to **Artifacts** →
-  download `NightRider-Driver-APK` (that arrives as a small zip; unzip it to get the APK).
+  download **NightRider-Driver-APK**. That gives you `NightRider-Driver.apk`
+  straight away — nothing to unzip. (If your GitHub still hands it over as a
+  zip, unzip it and the APK is inside.)
 
 ## Step 6 — Install it on a phone
 
@@ -114,15 +116,15 @@ A red run is not something you did wrong, and it does not mean starting over. It
 means the project hit an error and I need to see it.
 
 1. Open the **Actions** tab and click the red run.
-2. Click the red step (usually **Build the APK**).
-3. Copy roughly the last 30 lines of that log and send them to me — I will fix the
-   project and you can re-run it with **Run workflow**.
+2. At the top of that page there is a section titled **The build did not finish**.
+   It already contains the last 60 lines of the build's own error output.
+3. Copy that block and send it to me — I will fix the project and you can re-run
+   it with **Run workflow**.
 
-The run page also has a **build-log** file in its Artifacts box at the bottom.
-That is the complete log, so if 30 lines are not enough, send that file instead.
-
-The run page itself now explains this in red at the top, so you do not have to
-remember it.
+If the summary block is not there, click the red step (usually **Build the APK**),
+copy the last 30 lines, and send those. The run page also keeps a **build-log**
+file in its Artifacts box at the bottom, which is the complete log — send that
+instead if 30 lines are not enough.
 
 ## Free minutes
 

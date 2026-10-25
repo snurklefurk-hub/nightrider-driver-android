@@ -1,26 +1,15 @@
 {
   "status": "unverified",
-  "codeRevision": "a85673bad724fd062b2a838eca82316584f632fe4a5ff79edd89995781ead1bf",
+  "codeRevision": "ebb329ae390dc2e7b078021515bde93d24ce526451721c47358ad8d1e9b23328",
   "reason": "This code revision has no matching host-run behavioral check.",
   "historicalReports": [
     {
       "path": "nightrider-driver-android/README.md",
-      "sha256": "e5f19b97665ffdb7cf047fb4399ecd38c51d2a7621872052131ee080d62d9ced"
+      "sha256": "70a9bf8df1fd1372aa8096da3391b1fb1341b65d08938d0a0e5553c718db3684"
     },
     {
       "path": "nightrider-driver-android/GET-THE-APK.md",
-      "sha256": "d151fa908af4f349b25f17bb8acf8444ddfe9aa14cce7d7ee7cacbea3f7aed8b"
+      "sha256": "ad533eddafde41ca77d91c1203852f7e0ce1af9f6ed71e68f2ae381f1879b430"
     }
-  ],
-  "checksRunHere": [
-    "validate_android_project.py - structural checks over 15 XML files: passed",
-    "Kotlin R.* reference resolution: 0 unresolved (12 ids, 22 strings, 10 colors, 4 styles)",
-    "XML @type/name reference resolution in layouts and manifest: 0 unresolved",
-    "launcher PNG integrity (Pillow verify): all valid",
-    ".github/workflows/build-apk.yml: no tab characters, consistent indentation"
-  ],
-  "notRunHere": [
-    "gradle assembleDebug - not possible in this sandbox (no JDK, Gradle or Android SDK, no network)",
-    "APK install or runtime behaviour on a real device"
   ]
 }
