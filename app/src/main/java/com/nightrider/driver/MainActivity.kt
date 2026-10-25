@@ -15,11 +15,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -48,6 +51,7 @@ class MainActivity : Activity() {
     private lateinit var boardStatus: TextView
     private lateinit var openRides: LinearLayout
     private lateinit var myRides: LinearLayout
+    private lateinit var chatConversation: Spinner
     private lateinit var chatLog: ScrollView
     private lateinit var chatContent: LinearLayout
     private lateinit var chatText: EditText
@@ -61,6 +65,8 @@ class MainActivity : Activity() {
     private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
+    private var selectedRideChatId = ""
+    private var chatRideIds: List<String> = listOf("")
     private var shownName = ""
     private var stage = "available"
     private var running = false
@@ -125,6 +131,24 @@ class MainActivity : Activity() {
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
         myRides = findViewById(R.id.myRides)
+        chatConversation = findViewById(R.id.chatConversation)
+        chatConversation.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, listOf(getString(R.string.chat_team))).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        chatConversation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val rideId = chatRideIds.getOrNull(position).orEmpty()
+                if (rideId != selectedRideChatId) {
+                    selectedRideChatId = rideId
+                    chatSeen = 0.0
+                    chatContent.removeAllViews()
+                    chatPrivate.visibility = if (rideId.isEmpty()) View.VISIBLE else View.GONE
+                    chatText.hint = if (rideId.isEmpty()) getString(R.string.chat_hint) else getString(R.string.ride_chat_hint)
+                    refreshChat()
+                }
+            }
+        }
         chatLog = findViewById(R.id.chatLog)
         chatContent = findViewById(R.id.chatContent)
         chatText = findViewById(R.id.chatText)
@@ -330,7 +354,7 @@ class MainActivity : Activity() {
                     s != "completed" && s != "cancelled"
                 }
                 stage = if (live.isEmpty()) "available" else live.last().optString("status", "available")
-                runOnUiThread { renderRides(open, mine) }
+                runOnUiThread { syncChatConversations(mine); renderRides(open, mine) }
             } catch (e: Exception) {
                 runOnUiThread {
                     if (e is ApiException && e.status == 401) {
@@ -345,6 +369,32 @@ class MainActivity : Activity() {
             } finally {
                 ridesBusy.set(false)
             }
+        }
+    }
+
+    private fun syncChatConversations(mine: List<JSONObject>) {
+        val previous = selectedRideChatId
+        val rides = mine.filter {
+            val status = it.optString("status")
+            status != "completed" && status != "cancelled"
+        }
+        chatRideIds = listOf("") + rides.map { it.optString("id") }
+        val labels = listOf(getString(R.string.chat_team)) + rides.map {
+            "Ride " + it.optString("id") + " · " + it.optString("rider_name", "Rider")
+        }
+        chatConversation.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        val index = chatRideIds.indexOf(previous).takeIf { it >= 0 } ?: 0
+        chatConversation.setSelection(index)
+        val chosen = chatRideIds[index]
+        if (chosen != selectedRideChatId) {
+            selectedRideChatId = chosen
+            chatSeen = 0.0
+            chatContent.removeAllViews()
+            chatPrivate.visibility = if (chosen.isEmpty()) View.VISIBLE else View.GONE
+            chatText.hint = if (chosen.isEmpty()) getString(R.string.chat_hint) else getString(R.string.ride_chat_hint)
+            refreshChat()
         }
     }
 
@@ -442,7 +492,6 @@ class MainActivity : Activity() {
                     row.addView(actionButton(label) { advanceRide(rideId) })
                 }
             }
-            row.addView(actionButton(getString(R.string.action_message_rider)) { showRideChatDialog(rideId) })
             if (status == "completed") {
                 row.addView(actionButton(getString(R.string.action_rate)) { rateDialog(rideId) })
             }
@@ -540,115 +589,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showRideChatDialog(rideId: String) {
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), 0)
-        }
-        val note = TextView(this).apply {
-            text = getString(R.string.ride_chat_note)
-            setTextColor(getColor(R.color.mist))
-            textSize = 12f
-        }
-        panel.addView(note)
-        val logScroll = ScrollView(this)
-        val log = TextView(this).apply {
-            setTextColor(getColor(R.color.ice))
-            textSize = 14f
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-        }
-        logScroll.addView(log)
-        panel.addView(logScroll, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
-        ))
-        val input = EditText(this).apply {
-            hint = getString(R.string.ride_chat_hint)
-            maxLines = 3
-            setTextColor(getColor(R.color.ice))
-            setHintTextColor(getColor(R.color.mist))
-        }
-        panel.addView(input)
-        val send = Button(this).apply {
-            text = getString(R.string.chat_send)
-            isAllCaps = false
-        }
-        panel.addView(send)
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.ride_chat_title, rideId))
-            .setView(panel)
-            .setNegativeButton(R.string.close, null)
-            .create()
-        val chatBusy = AtomicBoolean(false)
-        fun refreshMessages() {
-            if (!chatBusy.compareAndSet(false, true)) return
-            io.execute {
-                try {
-                    val messages = Api.get("/api/rides/" + Api.enc(rideId) + "/messages")
-                        .optJSONArray("messages") ?: JSONArray()
-                    val lines = ArrayList<String>()
-                    for (i in 0 until messages.length()) {
-                        val message = messages.optJSONObject(i) ?: continue
-                        val who = if (message.optString("role") == "driver") {
-                            getString(R.string.chat_you)
-                        } else {
-                            message.optString("from")
-                        }
-                        lines.add(who + ": " + message.optString("text"))
-                    }
-                    main.post {
-                        if (dialog.isShowing) {
-                            log.text = lines.joinToString("\n\n")
-                            logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
-                        }
-                    }
-                } catch (e: Exception) {
-                    main.post {
-                        if (dialog.isShowing) log.text = getString(R.string.action_failed, friendly(e))
-                    }
-                } finally {
-                    chatBusy.set(false)
-                }
-            }
-        }
-        val tick = object : Runnable {
-            override fun run() {
-                if (!dialog.isShowing) return
-                refreshMessages()
-                main.postDelayed(this, 4_000)
-            }
-        }
-        send.setOnClickListener {
-            val text = input.text.toString().trim()
-            if (text.isEmpty() || !send.isEnabled) return@setOnClickListener
-            send.isEnabled = false
-            io.execute {
-                try {
-                    Api.post(
-                        "/api/rides/" + Api.enc(rideId) + "/message",
-                        JSONObject().put("text", text).put("audience", "shared")
-                    )
-                    main.post {
-                        input.setText("")
-                        send.isEnabled = true
-                        refreshMessages()
-                    }
-                } catch (e: Exception) {
-                    main.post {
-                        send.isEnabled = true
-                        boardStatus.text = getString(R.string.action_failed, friendly(e))
-                    }
-                }
-            }
-        }
-        dialog.setOnShowListener {
-            refreshMessages()
-            main.postDelayed(tick, 4_000)
-        }
-        dialog.setOnDismissListener { main.removeCallbacks(tick) }
-        dialog.show()
-    }
-
     private fun confirmCancelRide(rideId: String) {
         AlertDialog.Builder(this)
             .setTitle(R.string.cancel_ride_title)
@@ -726,13 +666,16 @@ class MainActivity : Activity() {
     private fun refreshChat() {
         val name = prefs.driverName
         if (name.isBlank() || !chatBusy.compareAndSet(false, true)) return
+        val rideId = selectedRideChatId
         val since = chatSeen
         io.execute {
             try {
-                val res = Api.get(
-                    "/api/drivers/" + Api.enc(name) + "/messages?since=" +
-                        String.format(Locale.US, "%.3f", since)
-                )
+                val endpoint = if (rideId.isNotEmpty()) {
+                    "/api/rides/" + Api.enc(rideId) + "/messages?since=" + String.format(Locale.US, "%.3f", since)
+                } else {
+                    "/api/drivers/" + Api.enc(name) + "/messages?since=" + String.format(Locale.US, "%.3f", since)
+                }
+                val res = Api.get(endpoint)
                 val messages = res.optJSONArray("messages") ?: JSONArray()
                 val fresh = ArrayList<JSONObject>()
                 for (i in 0 until messages.length()) {
@@ -741,11 +684,10 @@ class MainActivity : Activity() {
                     if (at > chatSeen) chatSeen = at
                     fresh.add(message)
                 }
-                if (fresh.isNotEmpty()) {
-                    runOnUiThread {
-                        fresh.forEach { addChatBubble(it) }
-                        chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
-                    }
+                if (fresh.isNotEmpty()) runOnUiThread {
+                    if (rideId != selectedRideChatId) return@runOnUiThread
+                    fresh.forEach { addChatBubble(it) }
+                    chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
                 }
             } catch (ignored: Exception) {
                 // Chat is a side channel; the ride board already shows outages.
@@ -758,8 +700,9 @@ class MainActivity : Activity() {
     private fun addChatBubble(message: JSONObject) {
         val me = prefs.driverName
         val from = message.optString("from")
-        val mine = from == me
-        val priv = message.optString("channel") == "private"
+        val rideMode = selectedRideChatId.isNotEmpty()
+        val mine = if (rideMode) message.optString("role") == "driver" else from == me
+        val priv = if (rideMode) message.optString("audience") == "dispatch" else message.optString("channel") == "private"
 
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
@@ -829,13 +772,17 @@ class MainActivity : Activity() {
         val text = chatText.text.toString().trim()
         if (text.isEmpty() || !chatSending.compareAndSet(false, true)) return
         val priv = chatPrivate.isChecked
+        val rideId = selectedRideChatId
         chatSend.isEnabled = false
         io.execute {
             try {
-                Api.post(
-                    "/api/drivers/" + Api.enc(name) + "/message",
-                    JSONObject().put("text", text).put("private", priv)
-                )
+                if (rideId.isNotEmpty()) {
+                    Api.post("/api/rides/" + Api.enc(rideId) + "/message",
+                        JSONObject().put("text", text).put("audience", "shared"))
+                } else {
+                    Api.post("/api/drivers/" + Api.enc(name) + "/message",
+                        JSONObject().put("text", text).put("private", priv))
+                }
                 main.post {
                     chatText.setText("")
                     chatSend.isEnabled = true
