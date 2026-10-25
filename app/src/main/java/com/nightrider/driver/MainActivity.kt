@@ -442,6 +442,7 @@ class MainActivity : Activity() {
                     row.addView(actionButton(label) { advanceRide(rideId) })
                 }
             }
+            row.addView(actionButton(getString(R.string.action_message_rider)) { showRideChatDialog(rideId) })
             if (status == "completed") {
                 row.addView(actionButton(getString(R.string.action_rate)) { rateDialog(rideId) })
             }
@@ -537,6 +538,115 @@ class MainActivity : Activity() {
                 main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
             }
         }
+    }
+
+    private fun showRideChatDialog(rideId: String) {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), 0)
+        }
+        val note = TextView(this).apply {
+            text = getString(R.string.ride_chat_note)
+            setTextColor(getColor(R.color.mist))
+            textSize = 12f
+        }
+        panel.addView(note)
+        val logScroll = ScrollView(this)
+        val log = TextView(this).apply {
+            setTextColor(getColor(R.color.ice))
+            textSize = 14f
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+        logScroll.addView(log)
+        panel.addView(logScroll, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
+        ))
+        val input = EditText(this).apply {
+            hint = getString(R.string.ride_chat_hint)
+            maxLines = 3
+            setTextColor(getColor(R.color.ice))
+            setHintTextColor(getColor(R.color.mist))
+        }
+        panel.addView(input)
+        val send = Button(this).apply {
+            text = getString(R.string.chat_send)
+            isAllCaps = false
+        }
+        panel.addView(send)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.ride_chat_title, rideId))
+            .setView(panel)
+            .setNegativeButton(R.string.close, null)
+            .create()
+        val chatBusy = AtomicBoolean(false)
+        fun refreshMessages() {
+            if (!chatBusy.compareAndSet(false, true)) return
+            io.execute {
+                try {
+                    val messages = Api.get("/api/rides/" + Api.enc(rideId) + "/messages")
+                        .optJSONArray("messages") ?: JSONArray()
+                    val lines = ArrayList<String>()
+                    for (i in 0 until messages.length()) {
+                        val message = messages.optJSONObject(i) ?: continue
+                        val who = if (message.optString("role") == "driver") {
+                            getString(R.string.chat_you)
+                        } else {
+                            message.optString("from")
+                        }
+                        lines.add(who + ": " + message.optString("text"))
+                    }
+                    main.post {
+                        if (dialog.isShowing) {
+                            log.text = lines.joinToString("\n\n")
+                            logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
+                        }
+                    }
+                } catch (e: Exception) {
+                    main.post {
+                        if (dialog.isShowing) log.text = getString(R.string.action_failed, friendly(e))
+                    }
+                } finally {
+                    chatBusy.set(false)
+                }
+            }
+        }
+        val tick = object : Runnable {
+            override fun run() {
+                if (!dialog.isShowing) return
+                refreshMessages()
+                main.postDelayed(this, 4_000)
+            }
+        }
+        send.setOnClickListener {
+            val text = input.text.toString().trim()
+            if (text.isEmpty() || !send.isEnabled) return@setOnClickListener
+            send.isEnabled = false
+            io.execute {
+                try {
+                    Api.post(
+                        "/api/rides/" + Api.enc(rideId) + "/message",
+                        JSONObject().put("text", text).put("audience", "shared")
+                    )
+                    main.post {
+                        input.setText("")
+                        send.isEnabled = true
+                        refreshMessages()
+                    }
+                } catch (e: Exception) {
+                    main.post {
+                        send.isEnabled = true
+                        boardStatus.text = getString(R.string.action_failed, friendly(e))
+                    }
+                }
+            }
+        }
+        dialog.setOnShowListener {
+            refreshMessages()
+            main.postDelayed(tick, 4_000)
+        }
+        dialog.setOnDismissListener { main.removeCallbacks(tick) }
+        dialog.show()
     }
 
     private fun confirmCancelRide(rideId: String) {
