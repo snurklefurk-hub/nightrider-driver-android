@@ -9,8 +9,9 @@
 # This file works whether the Android project sits at the top of the repo or in
 # a sub-folder (for example "android/") - it finds settings.gradle itself.
 #
-# If the build fails, the run page's summary shows the last 60 lines of the
-# Gradle log. Copy that block when asking for a fix.
+# If the build fails, the run page's summary shows the real error lines from the
+# Gradle log - Kotlin errors start with "e:" - plus Gradle's own "What went
+# wrong" block and the end of the log. Copy that block when asking for a fix.
 
 name: Build driver app APK
 
@@ -118,6 +119,11 @@ jobs:
 
       # Puts the real Gradle error on the run page, so the reason for a red X
       # is readable without digging through the step log.
+      #
+      # The last lines of a failed Gradle log are only a Java stack trace - the
+      # useful part is the compiler error above it (lines starting with "e:")
+      # and Gradle's own "What went wrong" block. Those are pulled out here
+      # first, and the tail of the log is kept only as a fallback.
       - name: Show why it failed
         if: failure()
         working-directory: ${{ steps.find.outputs.dir }}
@@ -126,11 +132,30 @@ jobs:
             echo "## The build did not finish"
             echo ""
             echo "Nothing you did wrong - the project hit an error."
-            echo "Copy the block below and send it over, and it can be fixed."
+            echo "Copy everything between the markers below and send it over,"
+            echo "and it can be fixed."
+            echo ""
+            echo "### The actual error messages"
+            echo ""
+            echo "(Kotlin errors start with \`e:\` - these name the file and line.)"
             echo ""
             echo '```text'
-            tail -60 build.log 2>/dev/null || echo "(no build.log was written)"
+            grep -anE '^e: |^FAILURE:|Execution failed for task|^Caused by:|Unresolved reference|error:|Compilation error' build.log 2>/dev/null | head -80 || echo "(no compiler error lines found)"
             echo '```'
+            echo ""
+            echo "### Gradle's own summary"
+            echo ""
+            echo '```text'
+            sed -n '/^\* What went wrong/,/^\* Try:/p' build.log 2>/dev/null | head -40 || true
+            echo '```'
+            echo ""
+            echo "### The end of the log"
+            echo ""
+            echo '```text'
+            tail -25 build.log 2>/dev/null || echo "(no build.log was written)"
+            echo '```'
+            echo ""
+            echo "--- END OF BUILD REPORT ---"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Give the APK a friendly name
@@ -168,5 +193,5 @@ jobs:
             --notes "Installable Android app for NightRider drivers.
 
           Tap NightRider-Driver.apk below to download it, open it on the phone,
-          and allow installing from this source. On first launch, enter your
-          NightRider web address."
+          and allow installing from this source. On first launch, sign in with
+          your driver name and a password for that phone."

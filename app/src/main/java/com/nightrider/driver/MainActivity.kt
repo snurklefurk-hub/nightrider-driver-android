@@ -1,239 +1,266 @@
 package com.nightrider.driver
 
 import android.Manifest
-import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.net.Uri
-import android.net.http.SslError
+import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
-import android.webkit.CookieManager
-import android.webkit.GeolocationPermissions
-import android.webkit.SslErrorHandler
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * The driver app.
+ * The driver console: sign in once, then watch open requests, move your own
+ * rides through the pickup/drop-off stages, and talk to dispatch.
  *
- * It loads the live NightRider driver page from your own server, so the app and
- * the website are the same experience: the ride workflow (head to pickup, arrive
- * at pickup, head to destination, arrive at destination, complete ride), the open
- * requests board, rider ratings, the shared team text with the Private toggle,
- * the nightwave styling, and the driver check-in all come from the same page.
+ * Rider and dispatch boards live in a browser; this app is driver only.
  */
-class MainActivity : AppCompatActivity() {
-
-    private lateinit var web: WebView
-    private lateinit var swipe: SwipeRefreshLayout
-    private lateinit var splash: View
-    private lateinit var errorPanel: View
-    private lateinit var errorText: TextView
+class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
-    private var loadedUrl: String? = null
+    private lateinit var loginScroll: ScrollView
+    private lateinit var nameInput: EditText
+    private lateinit var passInput: EditText
+    private lateinit var loginButton: Button
+    private lateinit var loginError: TextView
+    private lateinit var boardPanel: View
+    private lateinit var driverLine: TextView
+    private lateinit var boardStatus: TextView
+    private lateinit var openRides: LinearLayout
+    private lateinit var myRides: LinearLayout
+    private lateinit var chatLog: ScrollView
+    private lateinit var chatContent: LinearLayout
+    private lateinit var chatText: EditText
+    private lateinit var chatPrivate: CheckBox
+    private lateinit var chatSend: Button
 
-    private var geoCallback: GeolocationPermissions.Callback? = null
-    private var geoOrigin: String? = null
+    private val io = Executors.newSingleThreadExecutor()
+    private val main = Handler(Looper.getMainLooper())
+    private val ridesBusy = AtomicBoolean(false)
+    private val chatBusy = AtomicBoolean(false)
 
-    private val geoPermission = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        val allowed = grants.values.any { it }
-        geoCallback?.invoke(geoOrigin, allowed, false)
-        geoCallback = null
-        geoOrigin = null
+    private var chatSeen = 0.0
+    private var shownName = ""
+    private var stage = "available"
+    private var running = false
+    private var ridesSignature = ""
+
+    /** Mirrors the server's workflow so the app still works if config is slow. */
+    private val statusLabels = mapOf(
+        "requested" to "Requested",
+        "accepted" to "Assigned",
+        "to_pickup" to "Heading to pickup",
+        "at_pickup" to "At pickup",
+        "to_dropoff" to "Heading to destination",
+        "at_dropoff" to "At destination",
+        "completed" to "Completed",
+        "cancelled" to "Cancelled"
+    )
+    private val stageAction = mapOf(
+        "accepted" to "Head to pickup",
+        "to_pickup" to "Arrive at pickup",
+        "at_pickup" to "Head to destination",
+        "to_dropoff" to "Arrive at destination",
+        "at_dropoff" to "Complete ride"
+    )
+
+    private val rideTick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            refreshRides()
+            main.postDelayed(this, 6_000)
+        }
+    }
+
+    private val chatTick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            refreshChat()
+            main.postDelayed(this, 4_000)
+        }
+    }
+
+    private val pingTick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            pingDriver()
+            main.postDelayed(this, 20_000)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         prefs = Prefs(this)
 
-        web = findViewById(R.id.web)
-        swipe = findViewById(R.id.swipe)
-        splash = findViewById(R.id.splash)
-        errorPanel = findViewById(R.id.errorPanel)
-        errorText = findViewById(R.id.errorText)
+        loginScroll = findViewById(R.id.loginScroll)
+        nameInput = findViewById(R.id.nameInput)
+        passInput = findViewById(R.id.passInput)
+        loginButton = findViewById(R.id.loginButton)
+        loginError = findViewById(R.id.loginError)
+        boardPanel = findViewById(R.id.boardPanel)
+        driverLine = findViewById(R.id.driverLine)
+        boardStatus = findViewById(R.id.boardStatus)
+        openRides = findViewById(R.id.openRides)
+        myRides = findViewById(R.id.myRides)
+        chatLog = findViewById(R.id.chatLog)
+        chatContent = findViewById(R.id.chatContent)
+        chatText = findViewById(R.id.chatText)
+        chatPrivate = findViewById(R.id.chatPrivate)
+        chatSend = findViewById(R.id.chatSend)
 
-        findViewById<Button>(R.id.retry).setOnClickListener {
-            errorPanel.visibility = View.GONE
-            splash.visibility = View.VISIBLE
-            loadDriverPage()
+        findViewById<Button>(R.id.settingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
-        findViewById<Button>(R.id.changeServer).setOnClickListener {
-            startActivity(Intent(this, SetupActivity::class.java))
-        }
-
-        swipe.setColorSchemeColors(ContextCompat.getColor(this, R.color.cyan))
-        swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.indigo))
-        swipe.setOnRefreshListener { web.reload() }
-
-        configureWebView()
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (web.canGoBack()) {
-                    web.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
+        loginButton.setOnClickListener { attemptLogin() }
+        passInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                attemptLogin()
+                true
+            } else {
+                false
             }
-        })
+        }
+        chatSend.setOnClickListener { sendChat() }
+        chatText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendChat()
+                true
+            } else {
+                false
+            }
+        }
 
-        if (!prefs.hasServer()) {
-            startActivity(Intent(this, SetupActivity::class.java))
+        if (prefs.lastName.isNotBlank()) nameInput.setText(prefs.lastName)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyKeepAwake()
+        val name = prefs.driverName
+        if (name.isBlank()) {
+            stopPolling()
+            showLogin()
         } else {
-            loadDriverPage()
+            if (shownName != name) {
+                shownName = name
+                chatSeen = 0.0
+                ridesSignature = ""
+                chatContent.removeAllViews()
+                openRides.removeAllViews()
+                myRides.removeAllViews()
+            }
+            showBoard(name)
+            startPolling()
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun configureWebView() {
-        web.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            databaseEnabled = true
-            loadsImagesAutomatically = true
-            // The team text cue must be able to play without an extra tap.
-            mediaPlaybackRequiresUserGesture = false
-            useWideViewPort = true
-            loadWithOverviewMode = false
-            setSupportZoom(false)
-            builtInZoomControls = false
-            displayZoomControls = false
-            allowFileAccess = false
-            allowContentAccess = false
-            javaScriptCanOpenWindowsAutomatically = false
-            setGeolocationEnabled(true)
-            cacheMode = WebSettings.LOAD_DEFAULT
-            userAgentString = userAgentString + " NightRiderDriverApp/1.0"
-        }
+    override fun onPause() {
+        super.onPause()
+        stopPolling()
+    }
 
-        web.setBackgroundColor(ContextCompat.getColor(this, R.color.void_night))
-        CookieManager.getInstance().setAcceptCookie(true)
-        CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
+    override fun onDestroy() {
+        super.onDestroy()
+        main.removeCallbacksAndMessages(null)
+        io.shutdownNow()
+    }
 
-        web.webViewClient = object : WebViewClient() {
+    // ---- session ---------------------------------------------------------
 
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest
-            ): Boolean {
-                val url = request.url
-                val host = url.host ?: return false
-                // Your own pages stay in the app; anything else opens in the browser.
-                if (host.equals(hostOf(prefs.serverUrl), ignoreCase = true)) return false
-                return openOutside(url)
-            }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                swipe.isRefreshing = false
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                splash.visibility = View.GONE
-                swipe.isRefreshing = false
-            }
-
-            override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
-            ) {
-                if (request?.isForMainFrame == true) showError()
-            }
-
-            override fun onReceivedSslError(
-                view: WebView?,
-                handler: SslErrorHandler?,
-                error: SslError?
-            ) {
-                handler?.cancel()
-                showError()
-            }
-        }
-
-        web.webChromeClient = object : WebChromeClient() {
-            @Suppress("DEPRECATION")
-            override fun onGeolocationPermissionsShowPrompt(
-                origin: String?,
-                callback: GeolocationPermissions.Callback?
-            ) {
-                if (origin == null || callback == null) return
-                if (hasLocationPermission()) {
-                    callback.invoke(origin, true, false)
-                    return
-                }
-                geoCallback = callback
-                geoOrigin = origin
-                geoPermission.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
-            }
+    private fun showLogin() {
+        boardPanel.visibility = View.GONE
+        loginScroll.visibility = View.VISIBLE
+        loginError.text = ""
+        loginButton.isEnabled = true
+        passInput.setText("")
+        if (nameInput.text.isNullOrBlank() && prefs.lastName.isNotBlank()) {
+            nameInput.setText(prefs.lastName)
         }
     }
 
-    private fun hostOf(url: String?): String? =
-        try {
-            Uri.parse(url ?: return null).host
-        } catch (e: Exception) {
-            null
-        }
-
-    private fun openOutside(url: Uri): Boolean =
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, url))
-            true
-        } catch (e: Exception) {
-            true
-        }
-
-    private fun hasLocationPermission(): Boolean {
-        val fine = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        return fine || coarse
+    private fun showBoard(name: String) {
+        loginScroll.visibility = View.GONE
+        boardPanel.visibility = View.VISIBLE
+        driverLine.text = getString(R.string.signed_in_as, name)
     }
 
-    private fun loadDriverPage() {
-        val base = prefs.serverUrl
-        if (base.isNullOrBlank()) {
-            startActivity(Intent(this, SetupActivity::class.java))
+    private fun attemptLogin() {
+        val name = nameInput.text.toString().trim()
+        val pin = passInput.text.toString()
+        loginError.text = ""
+
+        if (name.length < 2) {
+            loginError.text = getString(R.string.err_name)
             return
         }
-        loadedUrl = base
-        errorPanel.visibility = View.GONE
-        web.loadUrl("$base/driver.html")
+        if (pin.length < 4) {
+            loginError.text = getString(R.string.err_password)
+            return
+        }
+        if (prefs.hasPin(name) && !prefs.pinMatches(name, pin)) {
+            loginError.text = getString(R.string.err_wrong_pin)
+            return
+        }
+
+        loginButton.isEnabled = false
+        io.execute {
+            try {
+                // Confirm the server knows how to reach this driver.
+                Api.post(
+                    "/api/drivers/ping",
+                    JSONObject().put("name", name).put("status", "available")
+                )
+                main.post {
+                    if (!prefs.hasPin(name)) prefs.setPin(name, pin)
+                    prefs.login(name)
+                    passInput.setText("")
+                    loginButton.isEnabled = true
+                    maybeAskLocation()
+                    shownName = ""
+                    onResume()
+                }
+            } catch (e: Exception) {
+                main.post {
+                    loginButton.isEnabled = true
+                    loginError.text = getString(R.string.err_unreachable, friendly(e))
+                }
+            }
+        }
     }
 
-    private fun showError() {
-        splash.visibility = View.GONE
-        swipe.isRefreshing = false
-        errorPanel.visibility = View.VISIBLE
-        errorText.text = getString(R.string.error_body, prefs.serverUrl ?: "")
+    private fun maybeAskLocation() {
+        val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                91
+            )
+        }
     }
 
     private fun applyKeepAwake() {
@@ -244,27 +271,455 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        applyKeepAwake()
-        // Timers keep running so the driver stays checked in with dispatch.
-        web.resumeTimers()
-        val base = prefs.serverUrl
-        if (base.isNullOrBlank()) {
-            if (loadedUrl != null) startActivity(Intent(this, SetupActivity::class.java))
-        } else if (base != loadedUrl) {
-            splash.visibility = View.VISIBLE
-            loadDriverPage()
+    // ---- polling ---------------------------------------------------------
+
+    private fun startPolling() {
+        if (running) return
+        running = true
+        main.post(rideTick)
+        main.post(chatTick)
+        main.post(pingTick)
+    }
+
+    private fun stopPolling() {
+        running = false
+        main.removeCallbacks(rideTick)
+        main.removeCallbacks(chatTick)
+        main.removeCallbacks(pingTick)
+    }
+
+    private fun pingDriver() {
+        val name = prefs.driverName
+        if (name.isBlank()) return
+        io.execute {
+            try {
+                Api.post(
+                    "/api/drivers/ping",
+                    JSONObject().put("name", name).put("status", stage)
+                )
+            } catch (ignored: Exception) {
+                // Presence is best effort; the ride poll reports real failures.
+            }
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        CookieManager.getInstance().flush()
+    // ---- rides -----------------------------------------------------------
+
+    private fun refreshRides() {
+        val name = prefs.driverName
+        if (name.isBlank() || !ridesBusy.compareAndSet(false, true)) return
+        io.execute {
+            try {
+                val all = Api.get("/api/rides").optJSONArray("rides") ?: JSONArray()
+                val open = ArrayList<JSONObject>()
+                val mine = ArrayList<JSONObject>()
+                for (i in 0 until all.length()) {
+                    val ride = all.optJSONObject(i) ?: continue
+                    val status = ride.optString("status")
+                    val driver = ride.optString("driver")
+                    if (status == "requested" && driver.isBlank()) {
+                        open.add(ride)
+                    } else if (driver == name) {
+                        mine.add(ride)
+                    }
+                }
+                val live = mine.filter {
+                    val s = it.optString("status")
+                    s != "completed" && s != "cancelled"
+                }
+                stage = if (live.isEmpty()) "available" else live.last().optString("status", "available")
+                runOnUiThread { renderRides(open, mine) }
+            } catch (e: Exception) {
+                runOnUiThread { boardStatus.text = getString(R.string.board_offline, friendly(e)) }
+            } finally {
+                ridesBusy.set(false)
+            }
+        }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        web.destroy()
+    private fun renderRides(open: List<JSONObject>, mine: List<JSONObject>) {
+        boardStatus.text = ""
+        val signature = signatureOf(open, mine)
+        if (signature == ridesSignature) return
+        ridesSignature = signature
+
+        openRides.removeAllViews()
+        if (open.isEmpty()) {
+            openRides.addView(emptyText(R.string.empty_open))
+        } else {
+            open.forEach { openRides.addView(rideCard(it, false)) }
+        }
+
+        myRides.removeAllViews()
+        if (mine.isEmpty()) {
+            myRides.addView(emptyText(R.string.empty_mine))
+        } else {
+            mine.forEach { myRides.addView(rideCard(it, true)) }
+        }
+    }
+
+    private fun signatureOf(open: List<JSONObject>, mine: List<JSONObject>): String {
+        val sb = StringBuilder()
+        open.forEach { sb.append(it.optString("id")).append(it.optString("status")).append('|') }
+        sb.append("//")
+        mine.forEach {
+            sb.append(it.optString("id"))
+                .append(it.optString("status"))
+                .append(it.optString("driver"))
+                .append('|')
+        }
+        return sb.toString()
+    }
+
+    private fun rideCard(ride: JSONObject, isMine: Boolean): View {
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        card.setBackgroundResource(R.drawable.panel)
+        val pad = dp(14)
+        card.setPadding(pad, pad, pad, pad)
+        val lp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        lp.bottomMargin = dp(10)
+        card.layoutParams = lp
+
+        val head = LinearLayout(this)
+        head.orientation = LinearLayout.HORIZONTAL
+        val idView = TextView(this)
+        idView.text = ride.optString("id")
+        idView.setTextColor(getColor(R.color.mist))
+        idView.textSize = 11f
+        head.addView(idView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val statusView = TextView(this)
+        statusView.text = statusLabels[ride.optString("status")] ?: ride.optString("status")
+        statusView.setTextColor(getColor(R.color.cyan))
+        statusView.textSize = 11f
+        head.addView(statusView)
+        card.addView(head)
+
+        card.addView(field(R.string.field_pickup, ride.optString("pickup")))
+        card.addView(field(R.string.field_dropoff, ride.optString("dropoff")))
+
+        val bits = ArrayList<String>()
+        num(ride, "distance_mi")?.let { bits.add(String.format(Locale.US, "%.1f mi", it)) }
+        num(ride, "driver_to_pickup_mi")?.let {
+            bits.add(String.format(Locale.US, "%.1f mi to pickup", it))
+        }
+        num(ride, "fare")?.let { bits.add(money(it)) }
+        ride.optString("payment_method").takeIf { it.isNotBlank() }?.let { bits.add(it) }
+        ride.optString("rider_name").takeIf { it.isNotBlank() }?.let { bits.add(it) }
+        if (bits.isNotEmpty()) {
+            val meta = TextView(this)
+            meta.text = bits.joinToString("  \u00b7  ")
+            meta.setTextColor(getColor(R.color.mist))
+            meta.textSize = 12f
+            meta.setPadding(0, dp(6), 0, 0)
+            card.addView(meta)
+        }
+
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.setPadding(0, dp(10), 0, 0)
+        val status = ride.optString("status")
+        val rideId = ride.optString("id")
+        if (!isMine) {
+            row.addView(actionButton(getString(R.string.action_accept)) { acceptRide(rideId) })
+        } else {
+            stageAction[status]?.let { label ->
+                if (status != "completed" && status != "cancelled") {
+                    row.addView(actionButton(label) { advanceRide(rideId) })
+                }
+            }
+            if (status == "completed") {
+                row.addView(actionButton(getString(R.string.action_rate)) { rateDialog(rideId) })
+            }
+        }
+        if (row.childCount > 0) card.addView(row)
+
+        return card
+    }
+
+    private fun field(labelRes: Int, value: String): View {
+        val box = LinearLayout(this)
+        box.orientation = LinearLayout.VERTICAL
+        box.setPadding(0, dp(8), 0, 0)
+        val label = TextView(this)
+        label.text = getString(labelRes)
+        label.setTextColor(getColor(R.color.mist))
+        label.textSize = 10f
+        box.addView(label)
+        val text = TextView(this)
+        text.text = value
+        text.setTextColor(getColor(R.color.ice))
+        text.textSize = 15f
+        box.addView(text)
+        return box
+    }
+
+    private fun actionButton(label: String, onClick: () -> Unit): View {
+        val button = Button(this)
+        button.text = label
+        button.isAllCaps = false
+        button.setTextColor(getColor(R.color.cyan))
+        button.textSize = 12f
+        button.setBackgroundResource(R.drawable.btn_outline)
+        button.minimumHeight = 0
+        button.setPadding(dp(14), dp(8), dp(14), dp(8))
+        val lp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        lp.marginEnd = dp(8)
+        button.layoutParams = lp
+        button.setOnClickListener { onClick() }
+        return button
+    }
+
+    private fun emptyText(resId: Int): View {
+        val text = TextView(this)
+        text.text = getString(resId)
+        text.setTextColor(getColor(R.color.mist))
+        text.textSize = 13f
+        text.setPadding(0, dp(4), 0, dp(12))
+        return text
+    }
+
+    private fun acceptRide(rideId: String) {
+        val name = prefs.driverName
+        if (name.isBlank()) return
+        val coords = currentCoords()
+        io.execute {
+            try {
+                val body = JSONObject().put("driver", name)
+                if (coords != null) {
+                    body.put(
+                        "driver_coords",
+                        JSONObject().put("lat", coords.first).put("lng", coords.second)
+                    )
+                }
+                Api.post("/api/rides/" + Api.enc(rideId) + "/accept", body)
+                main.post {
+                    ridesSignature = ""
+                    boardStatus.text = ""
+                    refreshRides()
+                }
+            } catch (e: Exception) {
+                main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
+            }
+        }
+    }
+
+    private fun advanceRide(rideId: String) {
+        io.execute {
+            try {
+                Api.post("/api/rides/" + Api.enc(rideId) + "/advance", JSONObject())
+                main.post {
+                    ridesSignature = ""
+                    boardStatus.text = ""
+                    refreshRides()
+                }
+            } catch (e: Exception) {
+                main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
+            }
+        }
+    }
+
+    private fun rateDialog(rideId: String) {
+        val stars = arrayOf("1 \u2605", "2 \u2605", "3 \u2605", "4 \u2605", "5 \u2605")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.rate_title)
+            .setItems(stars) { _, which -> sendRating(rideId, which + 1) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun sendRating(rideId: String, stars: Int) {
+        val name = prefs.driverName
+        io.execute {
+            try {
+                Api.post(
+                    "/api/rides/" + Api.enc(rideId) + "/rating",
+                    JSONObject()
+                        .put("by", "driver")
+                        .put("by_name", name)
+                        .put("stars", stars)
+                        .put("issues", JSONArray())
+                )
+                main.post {
+                    boardStatus.text = getString(R.string.rate_saved, stars)
+                    ridesSignature = ""
+                    refreshRides()
+                }
+            } catch (e: Exception) {
+                main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
+            }
+        }
+    }
+
+    private fun currentCoords(): Pair<Double, Double>? {
+        val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
+            return null
+        }
+        return try {
+            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            if (loc == null) null else Pair(loc.latitude, loc.longitude)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ---- team text -------------------------------------------------------
+
+    private fun refreshChat() {
+        val name = prefs.driverName
+        if (name.isBlank() || !chatBusy.compareAndSet(false, true)) return
+        val since = chatSeen
+        io.execute {
+            try {
+                val res = Api.get(
+                    "/api/drivers/" + Api.enc(name) + "/messages?since=" +
+                        String.format(Locale.US, "%.3f", since)
+                )
+                val messages = res.optJSONArray("messages") ?: JSONArray()
+                val fresh = ArrayList<JSONObject>()
+                for (i in 0 until messages.length()) {
+                    val message = messages.optJSONObject(i) ?: continue
+                    val at = message.optDouble("at", 0.0)
+                    if (at > chatSeen) chatSeen = at
+                    fresh.add(message)
+                }
+                if (fresh.isNotEmpty()) {
+                    runOnUiThread {
+                        fresh.forEach { addChatBubble(it) }
+                        chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
+                    }
+                }
+            } catch (ignored: Exception) {
+                // Chat is a side channel; the ride board already shows outages.
+            } finally {
+                chatBusy.set(false)
+            }
+        }
+    }
+
+    private fun addChatBubble(message: JSONObject) {
+        val me = prefs.driverName
+        val from = message.optString("from")
+        val mine = from == me
+        val priv = message.optString("channel") == "private"
+
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = if (mine) Gravity.END else Gravity.START
+        val lp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        lp.bottomMargin = dp(6)
+        row.layoutParams = lp
+
+        val bubble = LinearLayout(this)
+        bubble.orientation = LinearLayout.VERTICAL
+        bubble.setBackgroundResource(
+            when {
+                priv -> R.drawable.bubble_private
+                mine -> R.drawable.bubble_me
+                else -> R.drawable.bubble_them
+            }
+        )
+        val pad = dp(10)
+        bubble.setPadding(pad, dp(7), pad, dp(7))
+
+        val maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt()
+        val who = TextView(this)
+        when {
+            priv -> {
+                who.text = if (mine) {
+                    getString(R.string.chat_private)
+                } else {
+                    getString(R.string.chat_private_from, from)
+                }
+                who.setTextColor(getColor(R.color.plum))
+                who.textSize = 9f
+                bubble.addView(who)
+            }
+            !mine && from.isNotBlank() -> {
+                who.text = from
+                who.setTextColor(getColor(R.color.cyan))
+                who.textSize = 10f
+                bubble.addView(who)
+            }
+        }
+
+        val body = TextView(this)
+        body.text = message.optString("text")
+        body.setTextColor(getColor(R.color.ice))
+        body.textSize = 13f
+        body.maxWidth = maxWidth - dp(20)
+        bubble.addView(body)
+
+        val at = message.optDouble("at", 0.0)
+        val time = TextView(this)
+        time.text = DateFormat.getTimeInstance(DateFormat.SHORT)
+            .format(Date((at * 1000).toLong()))
+        time.setTextColor(getColor(R.color.mist))
+        time.textSize = 9f
+        bubble.addView(time)
+
+        row.addView(bubble)
+        chatContent.addView(row)
+    }
+
+    private fun sendChat() {
+        val name = prefs.driverName
+        if (name.isBlank()) return
+        val text = chatText.text.toString().trim()
+        if (text.isEmpty()) return
+        val priv = chatPrivate.isChecked
+        chatSend.isEnabled = false
+        io.execute {
+            try {
+                Api.post(
+                    "/api/drivers/" + Api.enc(name) + "/message",
+                    JSONObject().put("text", text).put("private", priv)
+                )
+                main.post {
+                    chatText.setText("")
+                    chatSend.isEnabled = true
+                    refreshChat()
+                }
+            } catch (e: Exception) {
+                main.post {
+                    chatSend.isEnabled = true
+                    boardStatus.text = getString(R.string.action_failed, friendly(e))
+                }
+            }
+        }
+    }
+
+    // ---- helpers ---------------------------------------------------------
+
+    private fun num(obj: JSONObject, key: String): Double? {
+        val value = obj.optDouble(key, Double.NaN)
+        return if (value.isNaN()) null else value
+    }
+
+    private fun money(value: Double): String =
+        "\$" + String.format(Locale.US, "%.2f", value)
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
+    private fun friendly(e: Throwable): String = when (e) {
+        is ApiException -> e.message ?: "Server error"
+        is java.net.UnknownHostException -> "No network connection."
+        is java.net.SocketTimeoutException -> "Server timed out."
+        is java.net.ConnectException -> "Server unreachable."
+        else -> e.message ?: e.javaClass.simpleName
     }
 }

@@ -21,13 +21,6 @@
         android:theme="@style/Theme.NightRider">
 
         <activity
-            android:name=".SetupActivity"
-            android:exported="true"
-            android:label="@string/setup_title"
-            android:theme="@style/Theme.NightRider"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
@@ -39,11 +32,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Reached from the small Settings button in the driver bar. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title"
+            android:theme="@style/Theme.NightRider"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

@@ -1,15 +1,41 @@
 {
   "status": "unverified",
-  "codeRevision": "ebb329ae390dc2e7b078021515bde93d24ce526451721c47358ad8d1e9b23328",
+  "codeRevision": "318fcb239f17edcc8d98ffd647b0ff4fbc2217232ac7bff76d5b863b7d3f66a0",
   "reason": "This code revision has no matching host-run behavioral check.",
   "historicalReports": [
     {
       "path": "nightrider-driver-android/README.md",
-      "sha256": "70a9bf8df1fd1372aa8096da3391b1fb1341b65d08938d0a0e5553c718db3684"
+      "sha256": "a6c5369d4a314a8fc84a840ee692c6de728dcf11781047ceba0f85fd161408f0"
     },
     {
       "path": "nightrider-driver-android/GET-THE-APK.md",
-      "sha256": "ad533eddafde41ca77d91c1203852f7e0ce1af9f6ed71e68f2ae381f1879b430"
+      "sha256": "3985a22e8cb4cdb0338efdae4c4c20ba50d44dc6ed036a205904380d08de38b2"
     }
-  ]
+  ],
+  "notice": "No host-run behavioral check and no on-device installation. A signed debug APK was built and structurally verified in this workspace (see localBuild), but nothing was installed or run on a phone or emulator. Verification covers file structure, resources and code content only; it does not prove runtime behaviour.",
+  "localBuild": {
+    "artifact": "nightrider-driver-android/NightRider-Driver.apk",
+    "sha256": "46479bd71d7634818d0e05cddd9e13f5d9d5e3fc183ee7b1d109c6357cc47f31",
+    "bytes": 649341,
+    "toolchain": "offline, no Gradle and no Maven: aapt2/d8/zipalign/apksigner (build-tools 34), kotlinc 1.9.24, JDK 17, android.jar platform-34",
+    "checksPassed": [
+      "apksigner verify --min-sdk-version 26: Verifies; v2 scheme=true, v3 scheme=true; 1 signer",
+      "apksigner --print-certs: CN=Android Debug, O=Android, C=US",
+      "aapt2 dump badging: package='com.nightrider.driver' versionCode=1 versionName=1.0 minSdk=26 targetSdk=34 compileSdk=34, launchable-activity com.nightrider.driver.MainActivity",
+      "aapt2 dump resources: layout/activity_main, layout/activity_settings and string/app_name present",
+      "dexdump classes.dex: MainActivity, SettingsActivity, Api and Prefs present; no SetupActivity class remains",
+      "unzip -t: archive integrity OK"
+    ],
+    "notChecked": [
+      "installation on a phone or emulator",
+      "runtime behaviour of the driver sign-in, ride board, chat and settings screens",
+      "network calls to https://nightrider.onrender.com",
+      "the location / notification permission prompts"
+    ]
+  },
+  "checksRunWithoutTheApk": [
+    "python3 validate_android_project.py \u2014 all structural checks passed (16 XML files parsed)",
+    "python3 check_workflow_yaml.py \u2014 workflow parsed, all structural checks passed (13 steps)"
+  ],
+  "note": "The app uses framework-only Android APIs (no external libraries). The GitHub/Gradle route in .github/workflows/build-apk.yml remains valid as an alternative build path."
 }

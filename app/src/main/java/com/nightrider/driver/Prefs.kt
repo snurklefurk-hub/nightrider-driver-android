@@ -2,50 +2,77 @@ package com.nightrider.driver
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.security.MessageDigest
 
 /**
- * Small settings store for the app.
+ * Local settings for the driver app.
  *
- * serverUrl   - the NightRider site address, e.g. https://nightrider-xxxx.onrender.com
- * keepAwake   - keep the screen on while the app is open (default on, for drivers)
+ * The backend has no driver accounts: a driver is identified by the name they
+ * type, and the app carries that name on every request. The password in the
+ * sign-in card is therefore a local device PIN that locks the signed-in
+ * session on this phone. It is stored only as a salted SHA-256 digest, never
+ * in plain text, and can be reset from Settings if it is forgotten.
  */
-class Prefs(context: Context) {
+class Prefs(ctx: Context) {
 
     private val sp: SharedPreferences =
-        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        ctx.applicationContext.getSharedPreferences("nightrider_driver", Context.MODE_PRIVATE)
 
-    var serverUrl: String?
-        get() = sp.getString(KEY_SERVER, null)
-        set(value) {
-            sp.edit().putString(KEY_SERVER, value).apply()
-        }
+    /** The driver signed in right now. Empty when signed out. */
+    var driverName: String
+        get() = sp.getString(KEY_NAME, "") ?: ""
+        set(value) = sp.edit().putString(KEY_NAME, value).apply()
+
+    /** Last name used, kept so the sign-in field is pre-filled after logout. */
+    var lastName: String
+        get() = sp.getString(KEY_LAST, "") ?: ""
+        set(value) = sp.edit().putString(KEY_LAST, value).apply()
 
     var keepAwake: Boolean
         get() = sp.getBoolean(KEY_AWAKE, true)
-        set(value) {
-            sp.edit().putBoolean(KEY_AWAKE, value).apply()
-        }
+        set(value) = sp.edit().putBoolean(KEY_AWAKE, value).apply()
 
-    fun hasServer(): Boolean = !serverUrl.isNullOrBlank()
+    val loggedIn: Boolean
+        get() = driverName.isNotBlank()
 
-    fun clearServer() {
-        sp.edit().remove(KEY_SERVER).apply()
+    fun hasPin(name: String): Boolean = sp.contains(pinKey(name))
+
+    fun pinMatches(name: String, pin: String): Boolean =
+        sp.getString(pinKey(name), null) == digest(name, pin)
+
+    fun setPin(name: String, pin: String) {
+        sp.edit().putString(pinKey(name), digest(name, pin)).apply()
+    }
+
+    fun clearPin(name: String) {
+        if (name.isNotBlank()) sp.edit().remove(pinKey(name)).apply()
+    }
+
+    fun login(name: String) {
+        lastName = name
+        driverName = name
+    }
+
+    fun logout() {
+        sp.edit().remove(KEY_NAME).apply()
+    }
+
+    private fun pinKey(name: String) = "pin_" + name.trim().lowercase()
+
+    private fun digest(name: String, pin: String): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val bytes = md.digest((name.trim().lowercase() + ":" + pin).toByteArray(Charsets.UTF_8))
+        val sb = StringBuilder(bytes.size * 2)
+        for (b in bytes) sb.append("%02x".format(b))
+        return sb.toString()
     }
 
     companion object {
-        private const val FILE = "nightrider_driver"
-        private const val KEY_SERVER = "server_url"
-        private const val KEY_AWAKE = "keep_awake"
+        /** The one server the app ever talks to. Not configurable at runtime. */
+        const val SERVER = "https://nightrider.onrender.com"
 
-        /** Turns whatever the driver typed into a clean base address, or null. */
-        fun normalize(raw: String?): String? {
-            var s = raw?.trim().orEmpty()
-            if (s.isEmpty()) return null
-            if (!s.startsWith("http://") && !s.startsWith("https://")) {
-                s = "https://$s"
-            }
-            while (s.endsWith("/")) s = s.dropLast(1)
-            return if (s.length <= "https://".length) null else s
-        }
+        private const val KEY_NAME = "driver_name"
+        private const val KEY_LAST = "last_name"
+        private const val KEY_AWAKE = "keep_awake"
     }
 }

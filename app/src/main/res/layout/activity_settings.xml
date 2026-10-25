@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings: signed-in driver, the fixed server address, screen-awake, logout. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_title" />
+
+        <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/driver_label" />
+
+        <TextView
+            android:id="@+id/driverValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/ice"
+            android:textSize="18sp" />
+
+        <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/server_label" />
+
+        <TextView
+            android:id="@+id/serverValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/cyan"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/server_note"
+            android:textColor="@color/mist"
+            android:textSize="12sp" />
+
+        <CheckBox
+            android:id="@+id/keepAwake"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/keep_awake"
+            android:textColor="@color/ice"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/logoutButton"
+            style="@style/NrButton.Alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="@string/action_logout" />
+
+        <Button
+            android:id="@+id/resetPinButton"
+            style="@style/NrBarButton.Alt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/reset_pin" />
+
+        <Button
+            android:id="@+id/closeButton"
+            style="@style/NrButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="@string/close" />
+    </LinearLayout>
+</ScrollView>

@@ -1,120 +1,239 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Driver console. Top bar carries only a small Settings button: the server is
+  fixed in code, so there is no reload or server button. The sign-in card is
+  replaced by the board once a driver is signed in.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_nightwave">
+    android:orientation="vertical">
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipe"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <WebView
-            android:id="@+id/web"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
-
-    <!-- Splash shown while the driver page is loading. -->
     <LinearLayout
-        android:id="@+id/splash"
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_nightwave"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp">
+        android:layout_height="wrap_content"
+        android:background="@color/void_night"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp">
 
-        <TextView
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/settingsButton"
+            style="@style/NrBarButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/brand_night"
-            android:textColor="@color/ice"
-            android:textSize="40sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.04" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/brand_rider"
-            android:textColor="@color/cyan"
-            android:textSize="40sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.04" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/app_name"
-            style="@style/NrLabel" />
-
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:indeterminateTint="@color/cyan" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/connecting"
-            android:textColor="@color/mist"
-            android:textSize="14sp" />
+            android:text="@string/settings" />
     </LinearLayout>
 
-    <!-- Shown only if the driver page cannot be reached. -->
-    <LinearLayout
-        android:id="@+id/errorPanel"
+    <ScrollView
+        android:id="@+id/loginScroll"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_nightwave"
-        android:gravity="center"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/loginPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                style="@style/NrLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/login_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/login_heading"
+                android:textColor="@color/ice"
+                android:textSize="24sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/login_help"
+                android:textColor="@color/mist"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/nameInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="@color/cyan"
+                android:hint="@string/hint_name"
+                android:imeOptions="actionNext"
+                android:inputType="textPersonName"
+                android:maxLines="1"
+                android:textColor="@color/ice"
+                android:textColorHint="@color/mist" />
+
+            <EditText
+                android:id="@+id/passInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="@color/cyan"
+                android:hint="@string/hint_password"
+                android:imeOptions="actionDone"
+                android:inputType="textPassword"
+                android:maxLines="1"
+                android:textColor="@color/ice"
+                android:textColorHint="@color/mist" />
+
+            <Button
+                android:id="@+id/loginButton"
+                style="@style/NrButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/login_button" />
+
+            <TextView
+                android:id="@+id/loginError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/rose"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/boardPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="12dp"
         android:visibility="gone">
+
+        <TextView
+            android:id="@+id/driverLine"
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/boardStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/rose"
+            android:textSize="12sp" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/NrLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_open" />
+
+                <LinearLayout
+                    android:id="@+id/openRides"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical" />
+
+                <TextView
+                    style="@style/NrLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/section_mine" />
+
+                <LinearLayout
+                    android:id="@+id/myRides"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </ScrollView>
+
+        <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/section_chat" />
+
+        <ScrollView
+            android:id="@+id/chatLog"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/panel"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:id="@+id/chatContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/panel"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
+            <CheckBox
+                android:id="@+id/chatPrivate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/error_title"
-                android:textColor="@color/ice"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/errorText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:text="@string/chat_private_short"
                 android:textColor="@color/mist"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/chatText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/cyan"
+                android:hint="@string/chat_hint"
+                android:imeOptions="actionSend"
+                android:inputType="textCapSentences"
+                android:maxLines="1"
+                android:textColor="@color/ice"
+                android:textColorHint="@color/mist" />
 
             <Button
-                android:id="@+id/retry"
-                style="@style/NrButton"
-                android:layout_width="match_parent"
+                android:id="@+id/chatSend"
+                style="@style/NrBarButton"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:text="@string/error_retry" />
-
-            <Button
-                android:id="@+id/changeServer"
-                style="@style/NrButton.Alt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/error_change" />
+                android:text="@string/chat_send" />
         </LinearLayout>
     </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>

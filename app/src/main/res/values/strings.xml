@@ -1,29 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NightRider Driver</string>
-    <string name="brand_night">Night</string>
-    <string name="brand_rider">Rider</string>
+    <string name="settings">Settings</string>
+    <string name="close">Close</string>
 
-    <string name="connecting">Connecting to your driver board…</string>
+    <!-- Sign-in card -->
+    <string name="login_label">Driver sign-in</string>
+    <string name="login_heading">Sign in to drive</string>
+    <string name="login_help">Enter the driver name dispatch knows you by and your password for this phone.</string>
+    <string name="hint_name">Driver name</string>
+    <string name="hint_password">Password</string>
+    <string name="login_button">Sign in</string>
+    <string name="err_name">Enter your driver name.</string>
+    <string name="err_password">Your password needs at least 4 characters.</string>
+    <string name="err_wrong_pin">That password does not match this driver name on this phone.</string>
+    <string name="err_unreachable">Could not sign in: %1$s</string>
 
-    <string name="error_title">Cannot reach your NightRider site</string>
-    <string name="error_body">The app could not load:\n%1$s/driver.html\n\nCheck the address, and make sure the phone has internet. On Render\'s free plan the site sleeps after a while — the first load can take about 30 seconds.</string>
-    <string name="error_retry">Try again</string>
-    <string name="error_change">Change address</string>
+    <!-- Driver board -->
+    <string name="signed_in_as">Signed in as %1$s</string>
+    <string name="section_open">Open requests</string>
+    <string name="section_mine">Your rides</string>
+    <string name="section_chat">Team text</string>
+    <string name="empty_open">No open requests right now.</string>
+    <string name="empty_mine">You have no rides yet.</string>
+    <string name="board_offline">Ride board unavailable: %1$s</string>
+    <string name="action_failed">That did not work: %1$s</string>
+    <string name="field_pickup">Pickup</string>
+    <string name="field_dropoff">Drop off</string>
+    <string name="action_accept">Accept ride</string>
+    <string name="action_rate">Rate rider</string>
+    <string name="rate_title">Rate this rider</string>
+    <string name="rate_saved">Saved a %1$d star rating.</string>
 
-    <string name="setup_title">Server settings</string>
-    <string name="setup_heading">NightRider address</string>
-    <string name="setup_help">This is the web address of your own NightRider site — the same link you open on a computer, for example https://nightrider-xxxx.onrender.com</string>
-    <string name="setup_hint">https://your-site.onrender.com</string>
-    <string name="setup_awake">Keep the screen on while the app is open</string>
-    <string name="setup_save">Save and open driver board</string>
-    <string name="setup_test">Test address</string>
-    <string name="setup_need_address">Type your NightRider address first.</string>
-    <string name="setup_testing">Checking the address…</string>
-    <string name="setup_ok">That address works. Tap Save to start driving.</string>
-    <string name="setup_bad_code">The site answered with an error (%1$d). Double-check the address.</string>
-    <string name="setup_unreachable">Could not reach that address. Check the spelling and your internet connection.</string>
+    <!-- Team text -->
+    <string name="chat_hint">Message dispatch</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_private_short">Private</string>
+    <string name="chat_private">Private to dispatch</string>
+    <string name="chat_private_from">Private from %1$s</string>
 
-    <string name="shortcut_server_short">Server</string>
-    <string name="shortcut_server_long">Server settings</string>
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="driver_label">Driver</string>
+    <string name="server_label">Server</string>
+    <string name="server_note">This address is fixed in the app and cannot be changed.</string>
+    <string name="keep_awake">Keep the screen on while driving</string>
+    <string name="not_signed_in">Not signed in</string>
+    <string name="action_logout">Log out</string>
+    <string name="logout_confirm">Log out of the driver console on this phone?</string>
+    <string name="reset_pin">Reset password for this phone</string>
+    <string name="reset_pin_confirm">Forget the saved password for this driver name and sign out?</string>
 </resources>

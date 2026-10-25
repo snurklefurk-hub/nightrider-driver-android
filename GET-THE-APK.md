@@ -1,5 +1,10 @@
 # Get the APK without touching Android Studio
 
+**Already done for you:** `NightRider-Driver.apk` is in this folder. It is a
+signed, installable build — skip straight to
+[Step 6 — Install it on a phone](#step-6--install-it-on-a-phone). The rest of
+this page is for rebuilding the app yourself after a change to the code.
+
 You do **not** need Android Studio on your computer. GitHub has free build
 computers: you drop the project in, press one button, and it hands you a finished
 `NightRider-Driver.apk` you can send to a phone. That is exactly what the file
@@ -103,8 +108,8 @@ Two ways, either is fine:
    **Settings** and switch on **Allow from this source**, then tap **Install**.
    (It may also warn that the app is from an unknown developer; that is normal for
    an app that isn't in the Play Store.)
-3. Open **NightRider Driver**, type your NightRider web address, tap
-   **Test connection**, then **Save**. The driver page opens.
+3. Open **NightRider Driver**, type your driver name and a password for the phone,
+   then tap **Sign in**. The board opens. (The server address is already built in.)
 
 That APK is a **debug build** — perfectly fine for installing on your own phones
 and your drivers' phones. If you ever want it in the Play Store, that needs a
