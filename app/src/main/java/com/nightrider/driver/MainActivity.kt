@@ -416,9 +416,11 @@ class MainActivity : Activity() {
         }
 
         myRides.removeAllViews()
-        val active = mine.filter { it.optString("status") != "completed" }
+        // Finished rides are terminal regardless of whether the trip was completed or cancelled.
+        val finishedStatuses = setOf("completed", "cancelled")
+        val active = mine.filter { it.optString("status") !in finishedStatuses }
         val completed = mine.withIndex()
-            .filter { it.value.optString("status") == "completed" }
+            .filter { it.value.optString("status") in finishedStatuses }
             .sortedWith(compareByDescending<IndexedValue<JSONObject>> { rideHistoryTimestamp(it.value) }
                 .thenByDescending { it.index })
             .take(5)
