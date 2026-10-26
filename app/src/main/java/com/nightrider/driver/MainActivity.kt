@@ -193,6 +193,9 @@ class MainActivity : Activity() {
             if (shownName != name) {
                 shownName = name
                 chatSeen = 0.0
+                shownChatIds.clear()
+                chatReplyTarget = null
+                chatReplyHint.visibility = View.GONE
                 ridesSignature = ""
                 chatContent.removeAllViews()
                 openRides.removeAllViews()
