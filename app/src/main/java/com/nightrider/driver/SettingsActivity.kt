@@ -38,9 +38,16 @@ class SettingsActivity : Activity() {
         updateStatus = findViewById(R.id.updateStatus)
         checkUpdate = findViewById(R.id.checkUpdateButton)
         installUpdate = findViewById(R.id.installUpdateButton)
+        // Keep the installed version visible even while an update check changes
+        // the status text (including when offline or after a failed download).
+        val installedInfo = packageManager.getPackageInfo(packageName, 0)
+        findViewById<TextView>(R.id.currentVersionValue).text = getString(
+            R.string.installed_version_value,
+            installedInfo.versionName ?: "—",
+            InAppUpdates.installedVersionCode(this)
+        )
         checkUpdate.setOnClickListener { checkForUpdates() }
         installUpdate.setOnClickListener { installAvailableUpdate() }
-        updateStatus.text = getString(R.string.update_current_version, InAppUpdates.installedVersionCode(this))
 
         serverValue.text = Prefs.SERVER
         keepAwake.isChecked = prefs.keepAwake
