@@ -189,7 +189,7 @@
         <ScrollView
             android:id="@+id/chatLog"
             android:layout_width="match_parent"
-            android:layout_height="180dp"
+            android:layout_height="270dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/panel"
             android:padding="8dp">

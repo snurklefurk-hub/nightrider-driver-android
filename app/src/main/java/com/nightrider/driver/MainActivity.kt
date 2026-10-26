@@ -71,6 +71,7 @@ class MainActivity : Activity() {
     private var stage = "available"
     private var running = false
     private var ridesSignature = ""
+    private var completedRidesExpanded = false
     private var latestLocation: Location? = null
     private var locationUpdatesRegistered = false
     private val locationListener = object : LocationListener {
@@ -200,6 +201,7 @@ class MainActivity : Activity() {
                 chatContent.removeAllViews()
                 openRides.removeAllViews()
                 myRides.removeAllViews()
+                completedRidesExpanded = false
             }
             showBoard(name)
             startPolling()
@@ -414,11 +416,50 @@ class MainActivity : Activity() {
         }
 
         myRides.removeAllViews()
-        if (mine.isEmpty()) {
-            myRides.addView(emptyText(R.string.empty_mine))
-        } else {
-            mine.forEach { myRides.addView(rideCard(it, true)) }
+        val active = mine.filter { it.optString("status") != "completed" }
+        val completed = mine.withIndex()
+            .filter { it.value.optString("status") == "completed" }
+            .sortedWith(compareByDescending<IndexedValue<JSONObject>> { rideHistoryTimestamp(it.value) }
+                .thenByDescending { it.index })
+            .take(5)
+            .map { it.value }
+
+        active.forEach { myRides.addView(rideCard(it, true)) }
+        if (completed.isNotEmpty()) {
+            val completedContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                visibility = if (completedRidesExpanded) View.VISIBLE else View.GONE
+            }
+            val toggle = Button(this).apply {
+                text = getString(R.string.completed_rides_toggle, completed.size,
+                    getString(if (completedRidesExpanded) R.string.completed_collapse else R.string.completed_expand))
+                isAllCaps = false
+                setOnClickListener {
+                    completedRidesExpanded = !completedRidesExpanded
+                    completedContainer.visibility = if (completedRidesExpanded) View.VISIBLE else View.GONE
+                    text = getString(R.string.completed_rides_toggle, completed.size,
+                        getString(if (completedRidesExpanded) R.string.completed_collapse else R.string.completed_expand))
+                }
+            }
+            myRides.addView(toggle)
+            completed.forEach { completedContainer.addView(rideCard(it, true)) }
+            myRides.addView(completedContainer)
         }
+        if (active.isEmpty() && completed.isEmpty()) {
+            myRides.addView(emptyText(R.string.empty_mine))
+        }
+    }
+
+    /** Prefer server ride timestamps; API list position breaks missing-date ties. */
+    private fun rideHistoryTimestamp(ride: JSONObject): Double {
+        for (key in listOf("completed_at", "updated_at", "created_at", "requested_at", "at")) {
+            val value = ride.opt(key) ?: continue
+            value.toString().toDoubleOrNull()?.let { if (it.isFinite()) return it }
+            try {
+                return java.time.Instant.parse(value.toString()).toEpochMilli().toDouble()
+            } catch (_: Exception) { }
+        }
+        return 0.0
     }
 
     private fun signatureOf(open: List<JSONObject>, mine: List<JSONObject>): String {
@@ -670,13 +711,7 @@ class MainActivity : Activity() {
     }
 
     private fun updateLocationLine() {
-        val name = prefs.driverName
-        val message = when {
-            !hasLocationPermission() -> "Location off · tap here to enable Dispatch location"
-            freshLocation() != null -> "Sharing location with Dispatch while this app is open"
-            else -> "Waiting for GPS · tap here to check location settings"
-        }
-        driverLine.text = getString(R.string.signed_in_as, name) + "\n" + message
+        driverLine.text = prefs.driverName
     }
 
     private fun startLocationUpdates() {
@@ -830,7 +865,7 @@ class MainActivity : Activity() {
             chatText.hint = getString(R.string.chat_hint)
         }
         chatPrivate.visibility = View.GONE
-        chatText.hint = if (rideId.isNotBlank()) getString(R.string.ride_chat_hint) else "Private note to Dispatch"
+        chatText.hint = getString(R.string.chat_hint)
         chatText.requestFocus()
     }
 

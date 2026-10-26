@@ -20,6 +20,9 @@
     <string name="section_chat">Chat</string>
     <string name="empty_open">No open requests right now.</string>
     <string name="empty_mine">You have no rides yet.</string>
+    <string name="completed_rides_toggle">Completed rides (%1$d) · %2$s</string>
+    <string name="completed_expand">Show</string>
+    <string name="completed_collapse">Hide</string>
     <string name="board_offline">Ride board unavailable: %1$s</string>
     <string name="action_failed">That did not work: %1$s</string>
     <string name="field_pickup">Pickup</string>
@@ -29,7 +32,7 @@
     
     <string name="ride_chat_title">Ride %1$s messages</string>
     <string name="ride_chat_note">Messages in this conversation are also visible to Dispatch.</string>
-    <string name="ride_chat_hint">Message the rider</string>
+    <string name="ride_chat_hint">Type here</string>
     <string name="chat_you">You</string>
     <string name="cancel_ride_title">Release this ride?</string>
     <string name="cancel_ride_message">This returns the active request to Dispatch’s open queue. The rider’s request stays active.</string>
@@ -39,7 +42,7 @@
     <string name="rate_saved">Saved a %1$d star rating.</string>
 
     <!-- Team text -->
-    <string name="chat_hint">Message dispatch</string>
+    <string name="chat_hint">Type here</string>
     <string name="chat_team">Team chat</string>
     <string name="chat_send">Send</string>
     <string name="chat_private_dispatch">Private to Dispatch</string>
