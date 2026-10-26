@@ -42,7 +42,7 @@
     <string name="chat_hint">Message dispatch</string>
     <string name="chat_team">Team chat</string>
     <string name="chat_send">Send</string>
-    <string name="chat_private_short">Private</string>
+    <string name="chat_private_dispatch">Private to Dispatch</string>
     <string name="chat_private">Private to dispatch</string>
     <string name="chat_private_from">Private from %1$s</string>
 
