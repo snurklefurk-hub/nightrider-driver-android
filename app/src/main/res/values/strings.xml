@@ -17,7 +17,7 @@
     <string name="signed_in_as">Signed in as %1$s</string>
     <string name="section_open">Open requests</string>
     <string name="section_mine">Your rides</string>
-    <string name="section_chat">Team text</string>
+    <string name="section_chat">Chat</string>
     <string name="empty_open">No open requests right now.</string>
     <string name="empty_mine">You have no rides yet.</string>
     <string name="board_offline">Ride board unavailable: %1$s</string>
