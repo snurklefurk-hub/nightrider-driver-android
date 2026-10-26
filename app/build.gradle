@@ -11,8 +11,8 @@ android {
         applicationId "com.nightrider.driver"
         minSdk 26
         targetSdk 34
-        versionCode (project.findProperty('nrVersionCode') ?: '1').toString().toInteger()
-        versionName (project.findProperty('nrVersionName') ?: '1.0').toString()
+        versionCode = Integer.parseInt((project.findProperty('nrVersionCode') ?: '1').toString())
+        versionName = (project.findProperty('nrVersionName') ?: '1.0').toString()
     }
 
     // A permanently retained keystore is supplied only by the signed-release workflow.
