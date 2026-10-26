@@ -47,18 +47,17 @@ class SettingsActivity : Activity() {
         val name = prefs.username
         if (name.isNotBlank()) prefs.lastName = name
         val token = prefs.sessionToken
-        Thread {
-            Api.sessionToken = token
-            try {
-                if (token.isNotBlank()) Api.post("/api/auth/logout", JSONObject())
-            } catch (_: Exception) {
-                // A local sign-out must still work when the server is unreachable.
-            } finally {
-                Api.sessionToken = ""
-                prefs.logout()
-                runOnUiThread { finish() }
-            }
-        }.start()
+        // Clear local credentials immediately, even without a network connection.
+        prefs.logout()
+        Api.sessionToken = ""
+        finish()
+        if (token.isNotBlank()) {
+            Thread {
+                try { Api.logout(token) } catch (_: Exception) {
+                    // The server-side token expires independently if offline.
+                }
+            }.start()
+        }
     }
 
     private fun confirm(message: String, positive: String, run: () -> Unit) {
