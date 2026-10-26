@@ -116,6 +116,9 @@ jobs:
       - name: Prepare unsigned release APK and signing tool
         run: |
           set -euo pipefail
+          # Only this temporary bootstrap needs an unsigned release; the regular
+          # signed-update workflow always uses the configured release key.
+          sed -i '/^[[:space:]]*signingConfig signingConfigs.distribution$/d' app/build.gradle
           gradle assembleRelease --no-daemon -PnrVersionCode=10000 -PnrVersionName=0.1.0
           mkdir -p bootstrap
           APK=$(find app/build/outputs/apk/release -name '*.apk' -print -quit)
