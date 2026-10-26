@@ -11,8 +11,22 @@ android {
         applicationId "com.nightrider.driver"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode (project.findProperty('nrVersionCode') ?: '1').toString().toInteger()
+        versionName (project.findProperty('nrVersionName') ?: '1.0').toString()
+    }
+
+    // A permanently retained keystore is supplied only by the signed-release workflow.
+    // Never put signing credentials or the keystore in Git.
+    signingConfigs {
+        distribution {
+            def signingFile = System.getenv('NR_KEYSTORE_PATH')
+            if (signingFile) {
+                storeFile file(signingFile)
+                storePassword System.getenv('NR_STORE_PASSWORD')
+                keyAlias System.getenv('NR_KEY_ALIAS')
+                keyPassword System.getenv('NR_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
@@ -20,6 +34,7 @@ android {
             applicationIdSuffix ""
         }
         release {
+            signingConfig signingConfigs.distribution
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
