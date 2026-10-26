@@ -110,6 +110,29 @@ jobs:
           set -o pipefail
           gradle assembleDebug --no-daemon --stacktrace --warning-mode all 2>&1 | tee build.log
 
+      # Temporary CI-only bootstrap: export an unsigned *release* APK and the
+      # SDK signer so the owner can sign locally with a permanent offline key.
+      # Never export a keystore or signing password as an artifact.
+      - name: Prepare unsigned release APK and signing tool
+        run: |
+          set -euo pipefail
+          gradle assembleRelease --no-daemon -PnrVersionCode=10000 -PnrVersionName=0.1.0
+          mkdir -p bootstrap
+          APK=$(find app/build/outputs/apk/release -name '*.apk' -print -quit)
+          test -n "$APK"
+          cp "$APK" bootstrap/NightRider-Driver-unsigned.apk
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner.jar -type f | sort -V | tail -1)
+          test -n "$SIGNER"
+          cp "$SIGNER" bootstrap/apksigner.jar
+          ls -lh bootstrap
+
+      - name: Download unsigned bootstrap APK and signer
+        uses: actions/upload-artifact@v7
+        with:
+          name: NightRider-signer-bootstrap
+          path: bootstrap/*
+          retention-days: 2
+
       - name: Keep the build log, pass or fail
         if: always()
         uses: actions/upload-artifact@v7
