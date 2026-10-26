@@ -16,9 +16,9 @@ class UpdateInstallReceiver : BroadcastReceiver() {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 @Suppress("DEPRECATION")
                 val confirmation = if (Build.VERSION.SDK_INT >= 33) {
-                    intent.getParcelableExtra(PackageInstaller.EXTRA_INTENT, Intent::class.java)
+                    intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
                 } else {
-                    intent.getParcelableExtra<Intent>(PackageInstaller.EXTRA_INTENT)
+                    intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                 }
                 if (confirmation != null) {
                     confirmation.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
