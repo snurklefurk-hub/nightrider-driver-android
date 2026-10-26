@@ -21,9 +21,14 @@ Install its APK on Android 8+ as a second, separate app.
 
 The demo centers on publicly chosen **Dallas, Texas** test locations (city
 streets and an interchange), not your actual location. Switch among:
-1. **OpenFreeMap Fiord** — blue-toned dark candidate, no key.
-2. **OpenFreeMap Dark** — alternate free dark candidate, no key.
-3. **MapTiler Streets Dark v4** — optional hosted comparison; enter your own
+1. **NightRider Midnight** — DEFAULT experimental midtone. Fiord vector
+   layers with darker navy land, subdued water, brighter class-differentiated
+   roads, and readable labels. It preserves the Fiord tile sources, underlying
+   geometry and attribution. Runtime paint overrides are not a final hosted
+   production style.
+2. **OpenFreeMap Fiord** — original blue-toned lighter candidate, no key.
+3. **OpenFreeMap Dark** — original darker candidate, no key.
+4. **MapTiler Streets Dark v4** — optional hosted comparison; enter your own
    MapTiler key at runtime. Nothing is written to local preferences or Git.
    The older Streets Night v2 style is deprecated; v4 Dark is used instead.
 
@@ -37,8 +42,9 @@ controls must remain visible and map providers' licensing must be followed.
 **Not turn-by-turn navigation.** There is intentionally no live position,
 route, guidance, GPS permission, or SmartZoom yet (those are Stage C/D tasks).
 Verify on a real device before integrating:
-- Both OpenFreeMap styles display detailed vector streets, intersections and
-  legible labels at identical camera positions.
+- Compare NightRider Midnight against both unmodified OpenFreeMap styles at
+  identical camera positions. Midnight should keep dark land while revealing
+  local roads, major roads, highway ramps and readable street labels.
 - Pitch stays flat after gestures and style switches.
 - Pan, pinch zoom, and both preset buttons work.
 - Rendering is smooth without native crashes (check Vulkan/OpenGL compatibility).
