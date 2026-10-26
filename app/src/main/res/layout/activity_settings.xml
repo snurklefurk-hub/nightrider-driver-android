@@ -63,6 +63,21 @@
             android:text="@string/update_section" />
 
         <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/installed_version_label" />
+
+        <TextView
+            android:id="@+id/currentVersionValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/ice"
+            android:textSize="16sp" />
+
+        <TextView
             android:id="@+id/updateStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
