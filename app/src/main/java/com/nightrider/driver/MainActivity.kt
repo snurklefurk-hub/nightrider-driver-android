@@ -119,11 +119,17 @@ class MainActivity : Activity() {
         Api.sessionToken = prefs.sessionToken
 
         loginScroll = findViewById(R.id.loginScroll)
+        val loginGrid = NightGridDrawable()
+        loginScroll.background = loginGrid
+        loginScroll.setOnScrollChangeListener { _, _, y, _, _ -> loginGrid.setParallaxOffset(y) }
         nameInput = findViewById(R.id.nameInput)
         passInput = findViewById(R.id.passInput)
         loginButton = findViewById(R.id.loginButton)
         loginError = findViewById(R.id.loginError)
         boardPanel = findViewById(R.id.boardPanel)
+        val boardGrid = NightGridDrawable()
+        boardPanel.background = boardGrid
+        findViewById<ScrollView>(R.id.boardScroll).setOnScrollChangeListener { _, _, y, _, _ -> boardGrid.setParallaxOffset(y) }
         driverLine = findViewById(R.id.driverLine)
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
