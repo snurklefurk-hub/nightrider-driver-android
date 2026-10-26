@@ -9,6 +9,7 @@ import android.view.View
 import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.ScrollView
 import android.widget.TextView
 import org.json.JSONObject
 
@@ -29,6 +30,13 @@ class SettingsActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         prefs = Prefs(this)
+
+        val settingsScroll = findViewById<ScrollView>(R.id.settingsScroll)
+        val settingsGrid = NightGridDrawable()
+        settingsScroll.background = settingsGrid
+        settingsScroll.setOnScrollChangeListener { _, _, y, _, _ ->
+            settingsGrid.setParallaxOffset(y)
+        }
 
         val driverValue = findViewById<TextView>(R.id.driverValue)
         val serverValue = findViewById<TextView>(R.id.serverValue)
