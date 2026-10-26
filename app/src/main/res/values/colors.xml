@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Blended Tidal Chrome + Emerald Night palette. -->
+<!-- Midnight Transit — Verdant Edition. Legacy names remain for layout compatibility. -->
 <resources>
-    <color name="void_night">#06131A</color>
-    <color name="indigo">#13282E</color>
-    <color name="plum">#2EE6A0</color>
-    <color name="rose">#FF6F91</color>
-    <color name="cyan">#2FE9FF</color>
-    <color name="ice">#F3FDFB</color>
-    <color name="mist">#8FAEB3</color>
-    <color name="lamp">#FFC36B</color>
-
-    <color name="panel">#D113282E</color>
-    <color name="line_cyan">#592FE9FF</color>
-    <color name="launcher_background">#06131A</color>
+    <color name="void_night">#071B12</color>
+    <color name="indigo">#173A29</color>
+    <color name="plum">#5AE6A5</color>
+    <color name="rose">#D95C4F</color>
+    <color name="cyan">#19D47B</color>
+    <color name="ice">#F2F0DF</color>
+    <color name="mist">#9BB7A5</color>
+    <color name="lamp">#F4B860</color>
+    <color name="panel">#E60E2B1E</color>
+    <color name="line_cyan">#6619D47B</color>
+    <color name="launcher_background">#071B12</color>
 </resources>

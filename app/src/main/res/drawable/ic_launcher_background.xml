@@ -1,25 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Deep evergreen night field for the adaptive retrowave icon. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <gradient
-                android:type="linear"
-                android:angle="270"
-                android:startColor="#10271B"
-                android:centerColor="#07140D"
-                android:endColor="#030B08" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="oval">
-            <gradient
-                android:type="radial"
-                android:gradientRadius="70%p"
-                android:centerX="0.5"
-                android:centerY="0.36"
-                android:startColor="#3D2EE6A0"
-                android:endColor="#00030B08" />
-        </shape>
-    </item>
+    <item><shape android:shape="rectangle">
+        <gradient android:angle="270" android:startColor="#173A29" android:centerColor="#0E2B1E" android:endColor="#071B12" />
+    </shape></item>
+    <item><shape android:shape="oval">
+        <gradient android:type="radial" android:gradientRadius="70%p" android:centerX="0.52" android:centerY="0.42"
+            android:startColor="#3319D47B" android:endColor="#00071B12" />
+    </shape></item>
 </layer-list>

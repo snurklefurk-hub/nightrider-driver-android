@@ -1,43 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- NightRider retrowave mark: a segmented sunset above a converging route grid. -->
+<!-- Talmadge Horizon: a cable-stayed Savannah bridge crossing a striped night moon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <path
-        android:fillColor="#FFF0C6"
-        android:pathData="M25,46 A29,29 0,0 1,83 46 A29,29 0,0 1,25 46 Z" />
-    <path
-        android:fillColor="#07140D"
-        android:pathData="M21,41 L87,41 L87,45 L21,45 Z M23,51 L85,51 L85,55 L23,55 Z M28,61 L80,61 L80,64 L28,64 Z" />
-    <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M8,65 L100,65 L100,67 L8,67 Z" />
-
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#AA2EE6A0"
-        android:strokeWidth="1.4"
-        android:pathData="M0,78 L108,78 M0,88 L108,88 M0,99 L108,99 M0,108 L108,108 M54,65 L2,108 M54,65 L24,108 M54,65 L40,108 M54,65 L54,108 M54,65 L68,108 M54,65 L84,108 M54,65 L106,108" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFCA70"
-        android:strokeWidth="2.2"
-        android:pathData="M52,66 L25,108" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#2FE9FF"
-        android:strokeWidth="2.2"
-        android:pathData="M56,66 L83,108" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#F3FDFB"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:pathData="M54,103 L54,99 M54,93 L54,89 M54,84 L54,81" />
-    <path
-        android:fillColor="#F3FDFB"
-        android:pathData="M54,67 A2.5,2.5 0,1 1,54 62 A2.5,2.5 0,0 1,54 67 Z" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#F2F0DF" android:pathData="M25,35 A31,31 0,0 1,87 35 L87,39 L25,39 Z" />
+    <path android:fillColor="#F2F0DF" android:pathData="M21,43 L91,43 L91,51 L21,51 Z" />
+    <path android:fillColor="#5AE6A5" android:pathData="M21,55 L91,55 L91,62 L21,62 Z" />
+    <path android:fillColor="#19D47B" android:pathData="M25,66 L87,66 L84,72 L28,72 Z" />
+    <path android:fillColor="#19D47B" android:pathData="M14,82 L96,64 L96,72 L14,90 Z" />
+    <path android:fillColor="#F2F0DF" android:pathData="M14,80 L96,62 L96,65 L14,83 Z" />
+    <path android:fillColor="#F2F0DF" android:pathData="M31,79 L33,58 L37,58 L39,77 Z M41,77 L40,58 L44,58 L47,76 Z M33,60 L44,60 L44,64 L33,64 Z" />
+    <path android:fillColor="#F2F0DF" android:pathData="M62,73 L65,34 L71,34 L72,71 Z M77,70 L76,34 L82,34 L85,68 Z M66,37 L81,37 L81,42 L66,42 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#F2F0DF" android:strokeWidth="1.7" android:strokeLineCap="round"
+        android:pathData="M34,62 L21,79 M37,62 L28,78 M40,62 L51,75 M43,62 L56,74" />
+    <path android:fillColor="#00000000" android:strokeColor="#F2F0DF" android:strokeWidth="2.1" android:strokeLineCap="round"
+        android:pathData="M68,40 L48,76 M70,40 L57,74 M72,40 L65,72 M79,40 L87,67 M81,40 L94,65" />
+    <path android:fillColor="#F4B860" android:pathData="M55,78 L63,75 L68,76 L60,80 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#5AE6A5" android:strokeWidth="1.8" android:strokeLineCap="round"
+        android:pathData="M33,94 L77,94 M41,99 L70,99 M49,103 L63,103" />
 </vector>

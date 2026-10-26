@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Static retrowave skyline for Android screens that do not scroll the driver board. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="360dp"
-    android:height="800dp"
-    android:viewportWidth="360"
-    android:viewportHeight="800">
-    <path
-        android:fillColor="#22FFC36B"
-        android:pathData="M113,280 A67,67 0,1 1,247 280 A67,67 0,1 1,113 280 Z" />
-    <path
-        android:fillColor="#FF07140D"
-        android:pathData="M104,273 L256,273 L256,284 L104,284 Z M111,301 L249,301 L249,313 L111,313 Z M122,330 L238,330 L238,339 L122,339 Z" />
-    <path android:fillColor="#AA2EE6A0" android:pathData="M0,365 L360,365 L360,368 L0,368 Z" />
-    <path android:fillColor="#5530D8A0" android:pathData="M180,366 L0,800 L360,800 Z" />
-    <path android:fillColor="#AA2EE6A0" android:pathData="M0,402 L360,402 L360,404 L0,404 Z M0,449 L360,449 L360,451 L0,451 Z M0,510 L360,510 L360,512 L0,512 Z M0,591 L360,591 L360,593 L0,593 Z M0,699 L360,699 L360,701 L0,701 Z" />
-    <path android:fillColor="#AA2EE6A0" android:pathData="M180,366 L0,800 L3,800 L182,366 Z M180,366 L45,800 L48,800 L182,366 Z M180,366 L90,800 L93,800 L182,366 Z M180,366 L135,800 L138,800 L182,366 Z M180,366 L180,800 L183,800 L182,366 Z M180,366 L225,800 L228,800 L182,366 Z M180,366 L270,800 L273,800 L182,366 Z M180,366 L315,800 L318,800 L182,366 Z M180,366 L360,800 L357,800 L182,366 Z" />
-    <path android:fillColor="#55FFC36B" android:pathData="M178,366 L182,366 L193,800 L188,800 Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="360dp" android:height="800dp"
+    android:viewportWidth="360" android:viewportHeight="800">
+    <path android:fillColor="#26F4B860" android:pathData="M113,280 A67,67 0,1 1,247 280 A67,67 0,1 1,113 280 Z" />
+    <path android:fillColor="#FF0E2B1E" android:pathData="M104,273 L256,273 L256,284 L104,284 Z M111,301 L249,301 L249,313 L111,313 Z M122,330 L238,330 L238,339 L122,339 Z" />
+    <path android:fillColor="#AA19D47B" android:pathData="M0,365 L360,365 L360,368 L0,368 Z" />
+    <path android:fillColor="#4019D47B" android:pathData="M180,366 L0,800 L360,800 Z" />
+    <path android:fillColor="#7A19D47B" android:pathData="M0,402 L360,402 L360,404 L0,404 Z M0,449 L360,449 L360,451 L0,451 Z M0,510 L360,510 L360,512 L0,512 Z M0,591 L360,591 L360,593 L0,593 Z M0,699 L360,699 L360,701 L0,701 Z" />
+    <path android:fillColor="#7A19D47B" android:pathData="M180,366 L0,800 L3,800 L182,366 Z M180,366 L45,800 L48,800 L182,366 Z M180,366 L90,800 L93,800 L182,366 Z M180,366 L135,800 L138,800 L182,366 Z M180,366 L180,800 L183,800 L182,366 Z M180,366 L225,800 L228,800 L182,366 Z M180,366 L270,800 L273,800 L182,366 Z M180,366 L315,800 L318,800 L182,366 Z M180,366 L360,800 L357,800 L182,366 Z" />
+    <path android:fillColor="#55F4B860" android:pathData="M178,366 L182,366 L193,800 L188,800 Z" />
 </vector>
