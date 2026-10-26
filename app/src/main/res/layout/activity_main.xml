@@ -200,6 +200,15 @@
                 android:orientation="vertical" />
         </ScrollView>
 
+        <TextView
+            android:id="@+id/chatReplyHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/cyan"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
