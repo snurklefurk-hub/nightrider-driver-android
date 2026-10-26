@@ -15,14 +15,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -51,7 +48,7 @@ class MainActivity : Activity() {
     private lateinit var boardStatus: TextView
     private lateinit var openRides: LinearLayout
     private lateinit var myRides: LinearLayout
-    private lateinit var chatConversation: Spinner
+    private lateinit var chatReplyHint: TextView
     private lateinit var chatLog: ScrollView
     private lateinit var chatContent: LinearLayout
     private lateinit var chatText: EditText
@@ -65,8 +62,7 @@ class MainActivity : Activity() {
     private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
-    private var selectedRideChatId = ""
-    private var chatRideIds: List<String> = listOf("")
+    private var chatReplyTarget: JSONObject? = null
     private var shownName = ""
     private var stage = "available"
     private var running = false
@@ -131,24 +127,7 @@ class MainActivity : Activity() {
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
         myRides = findViewById(R.id.myRides)
-        chatConversation = findViewById(R.id.chatConversation)
-        chatConversation.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, listOf(getString(R.string.chat_team))).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        chatConversation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val rideId = chatRideIds.getOrNull(position).orEmpty()
-                if (rideId != selectedRideChatId) {
-                    selectedRideChatId = rideId
-                    chatSeen = 0.0
-                    chatContent.removeAllViews()
-                    chatPrivate.visibility = if (rideId.isEmpty()) View.VISIBLE else View.GONE
-                    chatText.hint = if (rideId.isEmpty()) getString(R.string.chat_hint) else getString(R.string.ride_chat_hint)
-                    refreshChat()
-                }
-            }
-        }
+        chatReplyHint = findViewById(R.id.chatReplyHint)
         chatLog = findViewById(R.id.chatLog)
         chatContent = findViewById(R.id.chatContent)
         chatText = findViewById(R.id.chatText)
@@ -354,7 +333,7 @@ class MainActivity : Activity() {
                     s != "completed" && s != "cancelled"
                 }
                 stage = if (live.isEmpty()) "available" else live.last().optString("status", "available")
-                runOnUiThread { syncChatConversations(mine); renderRides(open, mine) }
+                runOnUiThread { renderRides(open, mine) }
             } catch (e: Exception) {
                 runOnUiThread {
                     if (e is ApiException && e.status == 401) {
@@ -369,32 +348,6 @@ class MainActivity : Activity() {
             } finally {
                 ridesBusy.set(false)
             }
-        }
-    }
-
-    private fun syncChatConversations(mine: List<JSONObject>) {
-        val previous = selectedRideChatId
-        val rides = mine.filter {
-            val status = it.optString("status")
-            status != "completed" && status != "cancelled"
-        }
-        chatRideIds = listOf("") + rides.map { it.optString("id") }
-        val labels = listOf(getString(R.string.chat_team)) + rides.map {
-            "Ride " + it.optString("id") + " · " + it.optString("rider_name", "Rider")
-        }
-        chatConversation.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        val index = chatRideIds.indexOf(previous).takeIf { it >= 0 } ?: 0
-        chatConversation.setSelection(index)
-        val chosen = chatRideIds[index]
-        if (chosen != selectedRideChatId) {
-            selectedRideChatId = chosen
-            chatSeen = 0.0
-            chatContent.removeAllViews()
-            chatPrivate.visibility = if (chosen.isEmpty()) View.VISIBLE else View.GONE
-            chatText.hint = if (chosen.isEmpty()) getString(R.string.chat_hint) else getString(R.string.ride_chat_hint)
-            refreshChat()
         }
     }
 
@@ -666,16 +619,10 @@ class MainActivity : Activity() {
     private fun refreshChat() {
         val name = prefs.driverName
         if (name.isBlank() || !chatBusy.compareAndSet(false, true)) return
-        val rideId = selectedRideChatId
         val since = chatSeen
         io.execute {
             try {
-                val endpoint = if (rideId.isNotEmpty()) {
-                    "/api/rides/" + Api.enc(rideId) + "/messages?since=" + String.format(Locale.US, "%.3f", since)
-                } else {
-                    "/api/drivers/" + Api.enc(name) + "/messages?since=" + String.format(Locale.US, "%.3f", since)
-                }
-                val res = Api.get(endpoint)
+                val res = Api.get("/api/chat/messages?since=" + String.format(Locale.US, "%.3f", since))
                 val messages = res.optJSONArray("messages") ?: JSONArray()
                 val fresh = ArrayList<JSONObject>()
                 for (i in 0 until messages.length()) {
@@ -685,7 +632,6 @@ class MainActivity : Activity() {
                     fresh.add(message)
                 }
                 if (fresh.isNotEmpty()) runOnUiThread {
-                    if (rideId != selectedRideChatId) return@runOnUiThread
                     fresh.forEach { addChatBubble(it) }
                     chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
                 }
@@ -698,72 +644,90 @@ class MainActivity : Activity() {
     }
 
     private fun addChatBubble(message: JSONObject) {
-        val me = prefs.driverName
         val from = message.optString("from")
-        val rideMode = selectedRideChatId.isNotEmpty()
-        val mine = if (rideMode) message.optString("role") == "driver" else from == me
-        val priv = if (rideMode) message.optString("audience") == "dispatch" else message.optString("channel") == "private"
-
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        row.gravity = if (mine) Gravity.END else Gravity.START
-        val lp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        lp.bottomMargin = dp(6)
-        row.layoutParams = lp
-
-        val bubble = LinearLayout(this)
-        bubble.orientation = LinearLayout.VERTICAL
-        bubble.setBackgroundResource(
-            when {
-                priv -> R.drawable.bubble_private
-                mine -> R.drawable.bubble_me
-                else -> R.drawable.bubble_them
-            }
-        )
-        val pad = dp(10)
-        bubble.setPadding(pad, dp(7), pad, dp(7))
-
-        val maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt()
-        val who = TextView(this)
-        when {
-            priv -> {
-                who.text = if (mine) {
-                    getString(R.string.chat_private)
-                } else {
-                    getString(R.string.chat_private_from, from)
-                }
-                who.setTextColor(getColor(R.color.plum))
-                who.textSize = 9f
-                bubble.addView(who)
-            }
-            !mine && from.isNotBlank() -> {
-                who.text = from
-                who.setTextColor(getColor(R.color.cyan))
-                who.textSize = 10f
-                bubble.addView(who)
+        val mine = message.optBoolean("mine")
+        val priv = message.optString("channel") == "private" ||
+            message.optString("audience") == "dispatch"
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = if (mine) Gravity.END else Gravity.START
+            val lp = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            lp.bottomMargin = dp(6); layoutParams = lp
+        }
+        val bubble = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(if (priv) R.drawable.bubble_private else if (mine) R.drawable.bubble_me else R.drawable.bubble_them)
+            val pad = dp(10); setPadding(pad, dp(7), pad, dp(7))
+        }
+        val color = try { android.graphics.Color.parseColor(message.optString("chat_color", "#ffffff")) }
+            catch (_: Exception) { getColor(R.color.ice) }
+        val who = TextView(this).apply {
+            text = (if (mine) "You" else from) +
+                (if (message.has("ride_id")) " · Ride " + message.optString("ride_id") else "") +
+                (if (priv) " · private" else "")
+            setTextColor(color); textSize = 10f
+        }
+        bubble.addView(who)
+        val body = TextView(this).apply {
+            text = message.optString("text")
+            setTextColor(getColor(R.color.ice)); textSize = 13f
+            maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt() - dp(20)
+        }
+        bubble.addView(body)
+        val at = message.optDouble("at", 0.0)
+        val time = TextView(this).apply {
+            text = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date((at * 1000).toLong()))
+            setTextColor(getColor(R.color.mist)); textSize = 9f
+        }
+        bubble.addView(time); row.addView(bubble)
+        if (priv) {
+            android.animation.ObjectAnimator.ofFloat(bubble, View.ALPHA, 0.88f, 1f).apply {
+                duration = 1250; repeatMode = android.animation.ValueAnimator.REVERSE
+                repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
         }
-
-        val body = TextView(this)
-        body.text = message.optString("text")
-        body.setTextColor(getColor(R.color.ice))
-        body.textSize = 13f
-        body.maxWidth = maxWidth - dp(20)
-        bubble.addView(body)
-
-        val at = message.optDouble("at", 0.0)
-        val time = TextView(this)
-        time.text = DateFormat.getTimeInstance(DateFormat.SHORT)
-            .format(Date((at * 1000).toLong()))
-        time.setTextColor(getColor(R.color.mist))
-        time.textSize = 9f
-        bubble.addView(time)
-
-        row.addView(bubble)
+        if (!mine) {
+            val reply = Button(this).apply {
+                text = "Reply"; isAllCaps = false
+                setOnClickListener { beginChatReply(message) }
+            }
+            row.addView(reply)
+        }
         chatContent.addView(row)
+    }
+
+    private fun beginChatReply(message: JSONObject) {
+        val target = JSONObject()
+        val rideId = message.optString("ride_id")
+        val role = message.optString("role")
+        val label: String
+        if (rideId.isNotBlank()) {
+            target.put("ride_id", rideId)
+            target.put("audience", if (message.optString("audience") == "dispatch") "dispatch" else "shared")
+            label = "Replying in ride " + rideId + " — tap here to cancel"
+        } else if (role == "dispatch") {
+            target.put("private", true)
+            label = "Replying privately to Dispatch — tap here to cancel"
+        } else {
+            chatReplyTarget = null
+            chatReplyHint.visibility = View.GONE
+            chatPrivate.visibility = View.VISIBLE
+            chatText.hint = getString(R.string.chat_hint)
+            return
+        }
+        chatReplyTarget = target
+        chatReplyHint.text = label
+        chatReplyHint.visibility = View.VISIBLE
+        chatReplyHint.setOnClickListener {
+            chatReplyTarget = null; chatReplyHint.visibility = View.GONE
+            chatPrivate.visibility = View.VISIBLE; chatPrivate.isChecked = false
+            chatText.hint = getString(R.string.chat_hint)
+        }
+        chatPrivate.visibility = View.GONE
+        chatText.hint = if (rideId.isNotBlank()) getString(R.string.ride_chat_hint) else "Private note to Dispatch"
+        chatText.requestFocus()
     }
 
     private fun sendChat() {
@@ -771,22 +735,28 @@ class MainActivity : Activity() {
         if (name.isBlank()) return
         val text = chatText.text.toString().trim()
         if (text.isEmpty() || !chatSending.compareAndSet(false, true)) return
-        val priv = chatPrivate.isChecked
-        val rideId = selectedRideChatId
+        val body = JSONObject().put("text", text)
+        chatReplyTarget?.let { target ->
+            val keys = target.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                body.put(key, target.get(key))
+            }
+        }
+        if (chatReplyTarget == null && chatPrivate.isChecked) body.put("private", true)
         chatSend.isEnabled = false
         io.execute {
             try {
-                if (rideId.isNotEmpty()) {
-                    Api.post("/api/rides/" + Api.enc(rideId) + "/message",
-                        JSONObject().put("text", text).put("audience", "shared"))
-                } else {
-                    Api.post("/api/drivers/" + Api.enc(name) + "/message",
-                        JSONObject().put("text", text).put("private", priv))
-                }
+                Api.post("/api/chat/messages", body)
                 main.post {
                     chatText.setText("")
                     chatSend.isEnabled = true
                     chatSending.set(false)
+                    chatReplyTarget = null
+                    chatReplyHint.visibility = View.GONE
+                    chatPrivate.visibility = View.VISIBLE
+                    chatPrivate.isChecked = false
+                    chatText.hint = getString(R.string.chat_hint)
                     refreshChat()
                 }
             } catch (e: Exception) {
