@@ -141,7 +141,8 @@ class PreviewActivity : Activity() {
             map = readyMap
             readyMap.setMinPitchPreference(0.0)
             readyMap.setMaxPitchPreference(0.0)
-            selectStyle(0)
+            // Fiord is the chosen baseline; alternative styles load only on demand.
+            selectStyle(1)
         }
     }
 
@@ -250,7 +251,7 @@ class PreviewActivity : Activity() {
                 val key = input.text.toString().trim()
                 if (key.isNotEmpty()) {
                     mapTilerKey = key
-                    selectStyle(2)
+                    selectStyle(3)
                 } else {
                     status.text = "MapTiler key not provided; Fiord and Dark are available without one."
                 }
