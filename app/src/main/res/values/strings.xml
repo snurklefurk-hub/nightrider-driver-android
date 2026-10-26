@@ -55,5 +55,17 @@
     <string name="not_signed_in">Not signed in</string>
     <string name="action_logout">Log out</string>
     <string name="logout_confirm">Log out of the driver console on this phone?</string>
+    <string name="update_section">App updates</string>
+    <string name="update_current_version">Installed version code: %1$d</string>
+    <string name="update_checking">Checking for NightRider updates…</string>
+    <string name="update_none">No newer approved update available.</string>
+    <string name="update_available">Version %1$d is available.</string>
+    <string name="update_check_failed">Could not check for updates: %1$s</string>
+    <string name="update_check_button">Check for updates</string>
+    <string name="update_install_button">Download and install update</string>
+    <string name="update_permission_help">Allow NightRider to install updates in Android settings, then return here and tap Download and install update again.</string>
+    <string name="update_downloading">Downloading and verifying the update…</string>
+    <string name="update_install_prompt">Update verified. Confirm installation when Android asks.</string>
+    <string name="update_install_failed">Could not install update: %1$s</string>
 </resources>
 

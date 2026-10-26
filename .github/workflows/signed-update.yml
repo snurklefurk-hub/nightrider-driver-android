@@ -1,0 +1,98 @@
+name: Publish signed NightRider in-app update
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/signed-update.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      NR_SIGNING_KEYSTORE_BASE64: ${{ secrets.NR_SIGNING_KEYSTORE_BASE64 }}
+      NR_STORE_PASSWORD: ${{ secrets.NR_SIGNING_STORE_PASSWORD }}
+      NR_KEY_ALIAS: ${{ secrets.NR_SIGNING_KEY_ALIAS }}
+      NR_KEY_PASSWORD: ${{ secrets.NR_SIGNING_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require complete, persistent signing configuration
+        id: signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$NR_SIGNING_KEYSTORE_BASE64" && -z "$NR_STORE_PASSWORD" && -z "$NR_KEY_ALIAS" && -z "$NR_KEY_PASSWORD" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "### Signed release not published" >> "$GITHUB_STEP_SUMMARY"
+            echo "Configure the four NR_SIGNING_* repository secrets once, then rerun this workflow. Debug APKs are not valid in-app updates." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for name in NR_SIGNING_KEYSTORE_BASE64 NR_STORE_PASSWORD NR_KEY_ALIAS NR_KEY_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "::error::Incomplete signing setup: $name is missing"; exit 1; }
+          done
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Java 17
+        if: steps.signing.outputs.configured == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle 8.7
+        if: steps.signing.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/gradle.zip" https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.7/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare signing key and monotonic version
+        if: steps.signing.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$NR_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nightrider-release.jks"
+          chmod 600 "$RUNNER_TEMP/nightrider-release.jks"
+          echo "NR_KEYSTORE_PATH=$RUNNER_TEMP/nightrider-release.jks" >> "$GITHUB_ENV"
+          echo "NR_RELEASE_CODE=$((10000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "NR_RELEASE_NAME=0.1.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          gradle assembleRelease --no-daemon -PnrVersionCode="$NR_RELEASE_CODE" -PnrVersionName="$NR_RELEASE_NAME"
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$SIGNER"
+          "$SIGNER" verify --print-certs "$APK"
+          mkdir -p out
+          cp "$APK" out/NightRider-Driver.apk
+          echo "NR_APK_SHA256=$(sha256sum out/NightRider-Driver.apk | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Publish update-channel release
+        if: steps.signing.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "nr-driver-v$NR_RELEASE_CODE"             "out/NightRider-Driver.apk#NightRider-Driver.apk"             --target "$GITHUB_SHA"             --title "NightRider Driver $NR_RELEASE_NAME"             --notes "NightRider in-app update (signed Android release).
+          VersionCode: $NR_RELEASE_CODE
+          SHA256: $NR_APK_SHA256"
+          echo "### Update published: NightRider Driver $NR_RELEASE_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "The APK and SHA-256 are available on the GitHub Releases page." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nightrider-release.jks"

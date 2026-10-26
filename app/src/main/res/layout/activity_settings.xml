@@ -55,6 +55,39 @@
             android:textColor="@color/mist"
             android:textSize="12sp" />
 
+        <TextView
+            style="@style/NrLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/update_section" />
+
+        <TextView
+            android:id="@+id/updateStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/update_checking"
+            android:textColor="@color/mist"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/checkUpdateButton"
+            style="@style/NrButton.Alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/update_check_button" />
+
+        <Button
+            android:id="@+id/installUpdateButton"
+            style="@style/NrButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/update_install_button"
+            android:visibility="gone" />
+
         <CheckBox
             android:id="@+id/keepAwake"
             android:layout_width="match_parent"
