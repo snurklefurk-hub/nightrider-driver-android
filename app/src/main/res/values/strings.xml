@@ -20,7 +20,7 @@
     <string name="section_chat">Chat</string>
     <string name="empty_open">No open requests right now.</string>
     <string name="empty_mine">You have no rides yet.</string>
-    <string name="completed_rides_toggle">Completed rides (%1$d) · %2$s</string>
+    <string name="completed_rides_toggle">Finished rides (%1$d) · %2$s</string>
     <string name="completed_expand">Show</string>
     <string name="completed_collapse">Hide</string>
     <string name="board_offline">Ride board unavailable: %1$s</string>
