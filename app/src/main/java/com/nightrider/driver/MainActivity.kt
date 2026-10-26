@@ -62,6 +62,7 @@ class MainActivity : Activity() {
     private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
+    private val shownChatIds = HashSet<String>()
     private var chatReplyTarget: JSONObject? = null
     private var shownName = ""
     private var stage = "available"
@@ -627,6 +628,8 @@ class MainActivity : Activity() {
                 val fresh = ArrayList<JSONObject>()
                 for (i in 0 until messages.length()) {
                     val message = messages.optJSONObject(i) ?: continue
+                    val unique = message.optString("message_kind") + ":" + message.optString("id")
+                    if (!shownChatIds.add(unique)) continue
                     val at = message.optDouble("at", 0.0)
                     if (at > chatSeen) chatSeen = at
                     fresh.add(message)
@@ -683,7 +686,7 @@ class MainActivity : Activity() {
         }
         bubble.addView(time); row.addView(bubble)
         if (priv) {
-            android.animation.ObjectAnimator.ofFloat(bubble, View.ALPHA, 0.88f, 1f).apply {
+            android.animation.ObjectAnimator.ofFloat(bubble, "elevation", dp(2).toFloat(), dp(12).toFloat()).apply {
                 duration = 1250; repeatMode = android.animation.ValueAnimator.REVERSE
                 repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
