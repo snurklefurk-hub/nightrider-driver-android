@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Emerald outline button — used for the secondary action, like the site. -->
+<!-- Jade outline button for secondary actions. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#332EE6A0" />
+            <solid android:color="#335AE6A5" />
             <stroke android:width="1dp" android:color="@color/plum" />
-            <corners android:radius="28dp" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#1A2EE6A0" />
-            <stroke android:width="1dp" android:color="#802EE6A0" />
-            <corners android:radius="28dp" />
+            <solid android:color="#1A5AE6A5" />
+            <stroke android:width="1dp" android:color="#805AE6A5" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
 </selector>

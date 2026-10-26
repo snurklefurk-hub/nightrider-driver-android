@@ -1,25 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Evergreen night and retrowave sunset/grid for secondary app screens. -->
+<!-- Midnight Transit forest field with a restrained amber horizon. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <gradient
-                android:angle="270"
-                android:startColor="#030B08"
-                android:centerColor="#07140D"
-                android:endColor="#08160F" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="oval">
-            <gradient
-                android:type="radial"
-                android:gradientRadius="180dp"
-                android:centerX="0.5"
-                android:centerY="0.35"
-                android:startColor="#44FFC36B"
-                android:endColor="#00030B08" />
-        </shape>
-    </item>
+    <item><shape android:shape="rectangle">
+        <gradient android:angle="270" android:startColor="#173A29" android:centerColor="#0E2B1E" android:endColor="#071B12" />
+    </shape></item>
+    <item><shape android:shape="oval">
+        <gradient android:type="radial" android:gradientRadius="180dp" android:centerX="0.5" android:centerY="0.35"
+            android:startColor="#33F4B860" android:endColor="#00071B12" />
+    </shape></item>
     <item android:drawable="@drawable/night_horizon_grid" />
 </layer-list>
