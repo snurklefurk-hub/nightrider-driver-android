@@ -185,12 +185,6 @@
             android:layout_marginTop="12dp"
             android:text="@string/section_chat" />
 
-        <Spinner
-            android:id="@+id/chatConversation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" />
-
         <ScrollView
             android:id="@+id/chatLog"
             android:layout_width="match_parent"
@@ -217,7 +211,7 @@
                 android:id="@+id/chatPrivate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/chat_private_short"
+                android:text="@string/chat_private_dispatch"
                 android:textColor="@color/mist"
                 android:textSize="12sp" />
 
