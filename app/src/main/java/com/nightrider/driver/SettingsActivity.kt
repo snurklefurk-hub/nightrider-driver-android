@@ -2,6 +2,10 @@ package com.nightrider.driver
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.view.View
 import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
@@ -15,6 +19,11 @@ import org.json.JSONObject
 class SettingsActivity : Activity() {
 
     private lateinit var prefs: Prefs
+    private lateinit var updateStatus: TextView
+    private lateinit var checkUpdate: Button
+    private lateinit var installUpdate: Button
+    private var availableUpdate: InAppUpdates.Release? = null
+    private var updateBusy = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +35,12 @@ class SettingsActivity : Activity() {
         val keepAwake = findViewById<CheckBox>(R.id.keepAwake)
         val logout = findViewById<Button>(R.id.logoutButton)
         val close = findViewById<Button>(R.id.closeButton)
+        updateStatus = findViewById(R.id.updateStatus)
+        checkUpdate = findViewById(R.id.checkUpdateButton)
+        installUpdate = findViewById(R.id.installUpdateButton)
+        checkUpdate.setOnClickListener { checkForUpdates() }
+        installUpdate.setOnClickListener { installAvailableUpdate() }
+        updateStatus.text = getString(R.string.update_current_version, InAppUpdates.installedVersionCode(this))
 
         serverValue.text = Prefs.SERVER
         keepAwake.isChecked = prefs.keepAwake
@@ -41,6 +56,74 @@ class SettingsActivity : Activity() {
             }
         }
         close.setOnClickListener { finish() }
+        checkForUpdates()
+    }
+
+    private fun checkForUpdates() {
+        if (updateBusy) return
+        updateBusy = true
+        checkUpdate.isEnabled = false
+        installUpdate.visibility = View.GONE
+        updateStatus.text = getString(R.string.update_checking)
+        Thread {
+            try {
+                val release = InAppUpdates.findUpdate(this)
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    availableUpdate = release
+                    updateStatus.text = if (release == null) getString(R.string.update_none) else
+                        getString(R.string.update_available, release.versionCode)
+                    installUpdate.visibility = if (release == null) View.GONE else View.VISIBLE
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        updateStatus.text = getString(R.string.update_check_failed, e.message ?: "Connection unavailable")
+                    }
+                }
+            } finally {
+                runOnUiThread {
+                    updateBusy = false
+                    checkUpdate.isEnabled = true
+                }
+            }
+        }.start()
+    }
+
+    private fun installAvailableUpdate() {
+        val release = availableUpdate ?: return
+        if (updateBusy) return
+        if (!packageManager.canRequestPackageInstalls()) {
+            updateStatus.text = getString(R.string.update_permission_help)
+            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:$packageName")))
+            return
+        }
+        updateBusy = true
+        checkUpdate.isEnabled = false
+        installUpdate.isEnabled = false
+        updateStatus.text = getString(R.string.update_downloading)
+        Thread {
+            try {
+                val apk = InAppUpdates.download(this, release)
+                InAppUpdates.install(this, apk, release)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) updateStatus.text = getString(R.string.update_install_prompt)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        updateStatus.text = getString(R.string.update_install_failed, e.message ?: "Try again")
+                    }
+                }
+            } finally {
+                runOnUiThread {
+                    updateBusy = false
+                    checkUpdate.isEnabled = true
+                    installUpdate.isEnabled = true
+                }
+            }
+        }.start()
     }
 
     private fun doLogout() {
