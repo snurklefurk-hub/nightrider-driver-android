@@ -34,7 +34,7 @@ class PreviewActivity : Activity() {
     private var selectedStyle = 0
     private var mapTilerKey: String? = null
 
-    private val background = Color.rgb(3, 11, 8)
+    private val canvasColor = Color.rgb(3, 11, 8)
     private val surface = Color.rgb(11, 29, 19)
     private val green = Color.rgb(46, 230, 160)
     private val cyan = Color.rgb(47, 233, 255)
@@ -56,7 +56,7 @@ class PreviewActivity : Activity() {
             .minZoomPreference(3.0)
             .maxZoomPreference(20.0)
         mapView = MapView(this, mapOptions)
-        val root = FrameLayout(this).apply { setBackgroundColor(background) }
+        val root = FrameLayout(this).apply { setBackgroundColor(canvasColor) }
         root.addView(mapView, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
@@ -151,7 +151,7 @@ class PreviewActivity : Activity() {
         selectedStyle = index
         styleButtons.forEachIndexed { i, b ->
             b.background = pill(i == index)
-            b.setTextColor(if (i == index) background else green)
+            b.setTextColor(if (i == index) canvasColor else green)
         }
         val label = listOf("OpenFreeMap Fiord", "OpenFreeMap Dark", "MapTiler Streets Dark")[index]
         status.text = "Loading $label…"
