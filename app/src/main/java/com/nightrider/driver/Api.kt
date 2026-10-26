@@ -23,10 +23,16 @@ object Api {
 
     fun post(path: String, body: JSONObject): JSONObject = request("POST", path, body)
 
+    /** Revoke a captured token without restoring it to the global active session. */
+    fun logout(token: String): JSONObject =
+        request("POST", "/api/auth/logout", JSONObject(), tokenOverride = token)
+
     /** Percent-encode one path segment (driver names, ride ids). */
     fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
-    private fun request(method: String, path: String, body: JSONObject?): JSONObject {
+    private fun request(
+        method: String, path: String, body: JSONObject?, tokenOverride: String? = null
+    ): JSONObject {
         val conn = (URL(Prefs.SERVER + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 12_000
@@ -34,7 +40,10 @@ object Api {
             useCaches = false
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "NightRiderDriver/1.1 (Android)")
-            if (sessionToken.isNotBlank()) setRequestProperty("Authorization", "Bearer $sessionToken")
+            val token = tokenOverride ?: sessionToken
+            if (path != "/api/auth/login" && token.isNotBlank()) {
+                setRequestProperty("Authorization", "Bearer $token")
+            }
             if (method == "POST" && path == "/api/auth/login") {
                 setRequestProperty("X-NightRider-Client", "android")
             }
