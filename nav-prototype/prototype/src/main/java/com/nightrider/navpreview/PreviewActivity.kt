@@ -21,6 +21,12 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.BackgroundLayer
+import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.layers.PropertyFactory
 
 /**
  * Standalone Stage B map comparison. No NightRider session, backend, ride,
@@ -81,13 +87,8 @@ class PreviewActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, 0)
         }
-        listOf("Fiord", "Dark", "MapTiler*").forEachIndexed { index, label ->
-            val button = makeButton(label).apply {
-                setOnClickListener {
-                    if (index == 2 && mapTilerKey.isNullOrBlank()) askMapTilerKey()
-                    else selectStyle(index)
-                }
-            }
+        listOf("Midnight", "Fiord", "Dark").forEachIndexed { index, label ->
+            val button = makeButton(label).apply { setOnClickListener { selectStyle(index) } }
             styles.addView(button, LinearLayout.LayoutParams(
                 0, dp(42), 1f).apply { marginEnd = if (index == 2) 0 else dp(6) })
             styleButtons.add(button)
@@ -98,14 +99,23 @@ class PreviewActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(8), 0, 0)
         }
-        val streets = makeButton("City streets").apply {
+        val mapTiler = makeButton("MapTiler*").apply {
+            setOnClickListener {
+                if (mapTilerKey.isNullOrBlank()) askMapTilerKey() else selectStyle(3)
+            }
+        }
+        val streets = makeButton("Streets").apply {
             setOnClickListener { centerAt(32.7767, -96.7970, 14.2) }
         }
-        val junction = makeButton("Interchange").apply {
+        val junction = makeButton("Junction").apply {
             setOnClickListener { centerAt(32.9244, -96.7612, 15.2) }
         }
-        presets.addView(streets, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(6) })
-        presets.addView(junction, LinearLayout.LayoutParams(0, dp(42), 1f))
+        listOf(mapTiler, streets, junction).forEachIndexed { i, button ->
+            presets.addView(button, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+                marginEnd = if (i == 2) 0 else dp(6)
+            })
+        }
+        styleButtons.add(mapTiler)
         controls.addView(presets)
 
         status = TextView(this).apply {
@@ -142,9 +152,10 @@ class PreviewActivity : Activity() {
 
     private fun selectStyle(index: Int) {
         val readyMap = map ?: return
+        // Midnight recolors Fiord's vector layers, preserving original map data.
         val url = when (index) {
-            0 -> "https://tiles.openfreemap.org/styles/fiord"
-            1 -> "https://tiles.openfreemap.org/styles/dark"
+            0, 1 -> "https://tiles.openfreemap.org/styles/fiord"
+            2 -> "https://tiles.openfreemap.org/styles/dark"
             else -> "https://api.maptiler.com/maps/streets-v4-dark/style.json?key=" +
                 Uri.encode(mapTilerKey ?: return)
         }
@@ -153,13 +164,75 @@ class PreviewActivity : Activity() {
             b.background = pill(i == index)
             b.setTextColor(if (i == index) canvasColor else green)
         }
-        val label = listOf("OpenFreeMap Fiord", "OpenFreeMap Dark", "MapTiler Streets Dark")[index]
+        val label = listOf("NightRider Midnight", "OpenFreeMap Fiord", "OpenFreeMap Dark",
+            "MapTiler Streets Dark")[index]
         status.text = "Loading $label…"
-        // setStyle is asynchronous; changing styles preserves the same camera and pitch.
-        readyMap.setStyle(url) {
-            if (selectedStyle == index) status.text =
-                "$label · zoom/pan enabled · 2D only"
+        // Runtime overrides are applied only to the freshly loaded Midnight style.
+        readyMap.setStyle(url) { loadedStyle ->
+            if (selectedStyle == index) {
+                if (index == 0) applyMidnightPalette(loadedStyle)
+                status.text = "$label · zoom/pan enabled · 2D only"
+            }
         }
+    }
+
+    /**
+     * Early Midnight palette: navy-charcoal land, subdued water, brighter
+     * class-differentiated roads and soft labels. Geometry/tile data unchanged.
+     */
+    private fun applyMidnightPalette(style: Style) {
+        (style.getLayer("background") as? BackgroundLayer)?.setProperties(
+            PropertyFactory.backgroundColor("#172635")
+        )
+        val fills = mapOf(
+            "water" to "#0D1D33",
+            "landuse_residential" to "#1D2D3C",
+            "landcover_ice_shelf" to "#243748",
+            "landcover_wood" to "#1C3440",
+            "park" to "#213A42",
+            "building" to "#324455",
+            "road_area_pier" to "#263747"
+        )
+        fills.forEach { (id, color) ->
+            (style.getLayer(id) as? FillLayer)?.setProperties(PropertyFactory.fillColor(color))
+        }
+        val lines = mapOf(
+            "waterway" to "#19394B",
+            "park_outline" to "#34576A",
+            "road_pier" to "#263747",
+            "highway_path" to "#3E5A72",
+            "highway_minor" to "#536F87",
+            "highway_major_casing" to "#3A5368",
+            "highway_major_inner" to "#7891A7",
+            "highway_major_subtle" to "#607D94",
+            "highway_motorway_casing" to "#465F75",
+            "highway_motorway_inner" to "#9BAEC2",
+            "highway_motorway_subtle" to "#728FA7",
+            "tunnel_motorway_casing" to "#304459",
+            "tunnel_motorway_inner" to "#53677E"
+        )
+        lines.forEach { (id, color) ->
+            (style.getLayer(id) as? LineLayer)?.setProperties(PropertyFactory.lineColor(color))
+        }
+        val labels = mapOf(
+            "highway_name_other" to "#CEDBE6",
+            "highway_ref" to "#E5EFF7",
+            "water_name" to "#829EB7",
+            "place_city" to "#B5C7D4",
+            "place_city_large" to "#C4D5DF",
+            "place_town" to "#A7C0CE",
+            "place_suburb" to "#7E96A8",
+            "place_village" to "#7F96A8"
+        )
+        labels.forEach { (id, color) ->
+            (style.getLayer(id) as? SymbolLayer)?.setProperties(
+                PropertyFactory.textColor(color),
+                PropertyFactory.textHaloColor("#172635")
+            )
+        }
+        (style.getLayer("place_other") as? SymbolLayer)?.setProperties(
+            PropertyFactory.textOpacity(0.2f)
+        )
     }
 
     private fun askMapTilerKey() {
