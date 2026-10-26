@@ -433,6 +433,10 @@ class MainActivity : Activity() {
                 visibility = if (completedRidesExpanded) View.VISIBLE else View.GONE
             }
             val toggle = Button(this).apply {
+                setBackgroundResource(R.drawable.btn_outline_plum)
+                setTextColor(getColor(R.color.plum))
+                minHeight = dp(48)
+                textSize = 13f
                 text = getString(R.string.completed_rides_toggle, completed.size,
                     getString(if (completedRidesExpanded) R.string.completed_collapse else R.string.completed_expand))
                 isAllCaps = false
@@ -831,6 +835,10 @@ class MainActivity : Activity() {
         }
         if (!mine) {
             val reply = Button(this).apply {
+                setBackgroundResource(R.drawable.btn_outline_plum)
+                setTextColor(getColor(R.color.plum))
+                minHeight = dp(40)
+                textSize = 12f
                 text = "Reply"; isAllCaps = false
                 setOnClickListener { beginChatReply(message) }
             }
