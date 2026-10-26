@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Blended Tidal Chrome + Emerald Night palette. -->
+<!-- Matches the dispatch website shared CSS tokens (Emerald Night). -->
 <resources>
-    <color name="void_night">#06131A</color>
-    <color name="indigo">#13282E</color>
+    <color name="void_night">#06130D</color>
+    <color name="indigo">#10271B</color>
     <color name="plum">#2EE6A0</color>
     <color name="rose">#FF6F91</color>
     <color name="cyan">#2FE9FF</color>
@@ -10,7 +10,7 @@
     <color name="mist">#8FAEB3</color>
     <color name="lamp">#FFC36B</color>
 
-    <color name="panel">#D113282E</color>
-    <color name="line_cyan">#592FE9FF</color>
+    <color name="panel">#E60B1D13</color>
+    <color name="line_cyan">#612EE6A0</color>
     <color name="launcher_background">#06131A</color>
 </resources>
