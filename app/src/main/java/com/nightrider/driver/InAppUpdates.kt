@@ -35,7 +35,7 @@ object InAppUpdates {
     fun installedVersionCode(context: Context): Long {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
         return if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else
-            @Suppress("DEPRECATION") info.versionCode.toLong()
+            info.versionCode.toLong()
     }
 
     /** Returns null if no newer *signed-update-channel* release exists. */
@@ -115,7 +115,7 @@ object InAppUpdates {
             val packageInfo = context.packageManager.getPackageArchiveInfo(target.absolutePath, 0)
                 ?: throw IOException("Downloaded update is not a valid APK")
             val code = if (Build.VERSION.SDK_INT >= 28) packageInfo.longVersionCode else
-                @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+                packageInfo.versionCode.toLong()
             if (packageInfo.packageName != context.packageName || code != release.versionCode.toLong()) {
                 throw IOException("Update package name or version does not match")
             }
