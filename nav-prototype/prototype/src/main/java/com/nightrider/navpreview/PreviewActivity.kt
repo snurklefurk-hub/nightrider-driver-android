@@ -250,7 +250,7 @@ class PreviewActivity : Activity() {
                 val key = input.text.toString().trim()
                 if (key.isNotEmpty()) {
                     mapTilerKey = key
-                    selectStyle(2)
+                    selectStyle(3)
                 } else {
                     status.text = "MapTiler key not provided; Fiord and Dark are available without one."
                 }
