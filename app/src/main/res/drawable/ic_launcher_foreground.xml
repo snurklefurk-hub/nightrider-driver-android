@@ -1,57 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive launcher foreground — "Verdant Chrome" mark for NightRider:
-     a chrome-lit whale gliding over a deep-emerald night, with a gold-cored
-     blossom below. Cyan and silver highlights read as reflective chrome. -->
+<!-- NightRider retrowave mark: a segmented sunset above a converging route grid. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Emerald/cyan halo -->
     <path
-        android:fillColor="#332EE6A0"
-        android:pathData="M54,54 a34,34 0 1,0 0.1,0 z" />
-
-    <!-- Whale body, chrome-cyan -->
+        android:fillColor="#FFF0C6"
+        android:pathData="M25,46 A29,29 0,0 1,83 46 A29,29 0,0 1,25 46 Z" />
     <path
-        android:fillColor="#C9D7E8"
-        android:pathData="M36,50 a24,14 0 1,0 48,0 a24,14 0 1,0 -48,0 z" />
-
-    <!-- Whale body inner tint -->
-    <path
-        android:fillColor="#2FE9FF"
-        android:pathData="M40,50 a20,11 0 1,0 40,0 a20,11 0 1,0 -40,0 z" />
-
-    <!-- Tail flukes, emerald -->
+        android:fillColor="#07140D"
+        android:pathData="M21,41 L87,41 L87,45 L21,45 Z M23,51 L85,51 L85,55 L23,55 Z M28,61 L80,61 L80,64 L28,64 Z" />
     <path
         android:fillColor="#2EE6A0"
-        android:pathData="M79,50 L97,38 L91,50 L97,62 Z" />
+        android:pathData="M8,65 L100,65 L100,67 L8,67 Z" />
 
-    <!-- Pectoral fin, chrome silver -->
     <path
-        android:fillColor="#C9D7E8"
-        android:pathData="M48,57 C54,67 63,67 67,61 C60,62 54,60 48,57 Z" />
-
-    <!-- Blossom petals, emerald -->
+        android:fillColor="#00000000"
+        android:strokeColor="#AA2EE6A0"
+        android:strokeWidth="1.4"
+        android:pathData="M0,78 L108,78 M0,88 L108,88 M0,99 L108,99 M0,108 L108,108 M54,65 L2,108 M54,65 L24,108 M54,65 L40,108 M54,65 L54,108 M54,65 L68,108 M54,65 L84,108 M54,65 L106,108" />
     <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M36,65 a4.5,4.5 0 1,0 0.1,0 z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#FFCA70"
+        android:strokeWidth="2.2"
+        android:pathData="M52,66 L25,108" />
     <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M28,71 a4.5,4.5 0 1,0 0.1,0 z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#2FE9FF"
+        android:strokeWidth="2.2"
+        android:pathData="M56,66 L83,108" />
     <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M44,71 a4.5,4.5 0 1,0 0.1,0 z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#F3FDFB"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,103 L54,99 M54,93 L54,89 M54,84 L54,81" />
     <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M31,80 a4.5,4.5 0 1,0 0.1,0 z" />
-    <path
-        android:fillColor="#2EE6A0"
-        android:pathData="M41,80 a4.5,4.5 0 1,0 0.1,0 z" />
-
-    <!-- Blossom heart, warm gold -->
-    <path
-        android:fillColor="#FFC36B"
-        android:pathData="M36,72 a3.2,3.2 0 1,0 0.1,0 z" />
+        android:fillColor="#F3FDFB"
+        android:pathData="M54,67 A2.5,2.5 0,1 1,54 62 A2.5,2.5 0,0 1,54 67 Z" />
 </vector>

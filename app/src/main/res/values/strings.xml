@@ -4,22 +4,20 @@
     <string name="settings">Settings</string>
     <string name="close">Close</string>
 
-    <!-- Sign-in card. Placeholder for now: any name is accepted and the password
-         is not checked, so blank or any value signs in. -->
     <string name="login_label">Driver sign-in</string>
     <string name="login_heading">Sign in to drive</string>
-    <string name="login_help">Type any driver name to continue. The password is a placeholder for now — leave it blank or enter anything.</string>
-    <string name="hint_name">Driver name</string>
-    <string name="hint_password">Password (optional)</string>
+    <string name="login_help">Use the NightRider username and password given to you by dispatch.</string>
+    <string name="hint_name">Username</string>
+    <string name="hint_password">Password</string>
     <string name="login_button">Sign in</string>
-    <string name="err_name">Enter a driver name.</string>
+    <string name="err_credentials">Enter your username and password.</string>
     <string name="err_unreachable">Could not sign in: %1$s</string>
 
     <!-- Driver board -->
     <string name="signed_in_as">Signed in as %1$s</string>
     <string name="section_open">Open requests</string>
     <string name="section_mine">Your rides</string>
-    <string name="section_chat">Team text</string>
+    <string name="section_chat">Chat</string>
     <string name="empty_open">No open requests right now.</string>
     <string name="empty_mine">You have no rides yet.</string>
     <string name="board_offline">Ride board unavailable: %1$s</string>
@@ -27,14 +25,24 @@
     <string name="field_pickup">Pickup</string>
     <string name="field_dropoff">Drop off</string>
     <string name="action_accept">Accept ride</string>
+    <string name="action_cancel_ride">Release ride to Dispatch</string>
+    
+    <string name="ride_chat_title">Ride %1$s messages</string>
+    <string name="ride_chat_note">Messages in this conversation are also visible to Dispatch.</string>
+    <string name="ride_chat_hint">Message the rider</string>
+    <string name="chat_you">You</string>
+    <string name="cancel_ride_title">Release this ride?</string>
+    <string name="cancel_ride_message">This returns the active request to Dispatch’s open queue. The rider’s request stays active.</string>
+    <string name="cancel_ride_done">Ride returned to Dispatch’s open queue.</string>
     <string name="action_rate">Rate rider</string>
     <string name="rate_title">Rate this rider</string>
     <string name="rate_saved">Saved a %1$d star rating.</string>
 
     <!-- Team text -->
     <string name="chat_hint">Message dispatch</string>
+    <string name="chat_team">Team chat</string>
     <string name="chat_send">Send</string>
-    <string name="chat_private_short">Private</string>
+    <string name="chat_private_dispatch">Private to Dispatch</string>
     <string name="chat_private">Private to dispatch</string>
     <string name="chat_private_from">Private from %1$s</string>
 
@@ -47,6 +55,5 @@
     <string name="not_signed_in">Not signed in</string>
     <string name="action_logout">Log out</string>
     <string name="logout_confirm">Log out of the driver console on this phone?</string>
-    <string name="reset_pin">Forget this sign-in</string>
-    <string name="reset_pin_confirm">Forget the saved driver name on this phone and sign out?</string>
 </resources>
+

@@ -17,6 +17,8 @@ name: Build driver app APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ main, master ]
   push:
     branches: [ main, master ]
     paths:
@@ -182,6 +184,7 @@ jobs:
       # third-party release action involved. A hiccup here does not fail the
       # build - the Artifacts download above is the main path.
       - name: Also put the APK on the Releases page
+        if: github.event_name != 'pull_request'
         working-directory: ${{ steps.find.outputs.dir }}
         continue-on-error: true
         env:
@@ -193,5 +196,6 @@ jobs:
             --notes "Installable Android app for NightRider drivers.
 
           Tap NightRider-Driver.apk below to download it, open it on the phone,
-          and allow installing from this source. On first launch, sign in with
-          your driver name and a password for that phone."
+          and allow installing from this source. Sign in with the NightRider
+          driver username and password provided by dispatch."
+

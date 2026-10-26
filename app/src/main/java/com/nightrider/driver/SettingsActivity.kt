@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
+import org.json.JSONObject
 
 /**
  * Settings: who is signed in, the fixed server address, screen-awake, and the
@@ -24,7 +25,6 @@ class SettingsActivity : Activity() {
         val serverValue = findViewById<TextView>(R.id.serverValue)
         val keepAwake = findViewById<CheckBox>(R.id.keepAwake)
         val logout = findViewById<Button>(R.id.logoutButton)
-        val resetPin = findViewById<Button>(R.id.resetPinButton)
         val close = findViewById<Button>(R.id.closeButton)
 
         serverValue.text = Prefs.SERVER
@@ -33,17 +33,10 @@ class SettingsActivity : Activity() {
 
         val name = prefs.driverName
         driverValue.text = if (name.isBlank()) getString(R.string.not_signed_in) else name
-        logout.isEnabled = name.isNotBlank()
-        resetPin.isEnabled = name.isNotBlank()
+        logout.isEnabled = prefs.loggedIn
 
         logout.setOnClickListener {
             confirm(getString(R.string.logout_confirm), getString(R.string.action_logout)) {
-                doLogout()
-            }
-        }
-        resetPin.setOnClickListener {
-            confirm(getString(R.string.reset_pin_confirm), getString(R.string.reset_pin)) {
-                prefs.clearPin(prefs.driverName)
                 doLogout()
             }
         }
@@ -51,10 +44,20 @@ class SettingsActivity : Activity() {
     }
 
     private fun doLogout() {
-        val name = prefs.driverName
+        val name = prefs.username
         if (name.isNotBlank()) prefs.lastName = name
+        val token = prefs.sessionToken
+        // Clear local credentials immediately, even without a network connection.
         prefs.logout()
+        Api.sessionToken = ""
         finish()
+        if (token.isNotBlank()) {
+            Thread {
+                try { Api.logout(token) } catch (_: Exception) {
+                    // The server-side token expires independently if offline.
+                }
+            }.start()
+        }
     }
 
     private fun confirm(message: String, positive: String, run: () -> Unit) {
@@ -65,3 +68,4 @@ class SettingsActivity : Activity() {
             .show()
     }
 }
+

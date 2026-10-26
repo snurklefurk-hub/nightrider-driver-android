@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tidal Emerald night backdrop with a soft emerald-cyan glow. -->
+<!-- Evergreen night and retrowave sunset/grid for secondary app screens. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#164343"
-                android:centerColor="@color/indigo"
-                android:endColor="@color/void_night" />
+                android:startColor="#030B08"
+                android:centerColor="#07140D"
+                android:endColor="#10271B" />
         </shape>
     </item>
-    <item android:top="0dp" android:gravity="top|end" android:height="220dp">
-        <shape android:shape="rectangle">
+    <item>
+        <shape android:shape="oval">
             <gradient
-                android:angle="225"
-                android:startColor="#332FE9FF"
-                android:endColor="#002FE9FF" />
+                android:type="radial"
+                android:gradientRadius="180dp"
+                android:centerX="0.5"
+                android:centerY="0.35"
+                android:startColor="#44FFC36B"
+                android:endColor="#00030B08" />
         </shape>
     </item>
+    <item android:drawable="@drawable/night_horizon_grid" />
 </layer-list>

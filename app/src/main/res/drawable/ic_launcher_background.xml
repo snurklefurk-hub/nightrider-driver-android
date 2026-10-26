@@ -1,38 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive-icon background — "Verdant Chrome": deep-emerald night base lit by
-     a cyan chrome bloom from the top-left and an emerald route glow from the
-     top-right. Sized for the 108dp adaptive viewport. -->
+<!-- Deep evergreen night field for the adaptive retrowave icon. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:type="linear"
                 android:angle="270"
-                android:startColor="#123230"
-                android:centerColor="#0C2426"
-                android:endColor="#08171A" />
+                android:startColor="#10271B"
+                android:centerColor="#07140D"
+                android:endColor="#030B08" />
         </shape>
     </item>
     <item>
         <shape android:shape="oval">
             <gradient
                 android:type="radial"
-                android:gradientRadius="62%p"
-                android:centerX="0.14"
-                android:centerY="0.0"
-                android:startColor="#552FE9FF"
-                android:endColor="#002FE9FF" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="oval">
-            <gradient
-                android:type="radial"
-                android:gradientRadius="52%p"
-                android:centerX="0.9"
-                android:centerY="0.06"
+                android:gradientRadius="70%p"
+                android:centerX="0.5"
+                android:centerY="0.36"
                 android:startColor="#3D2EE6A0"
-                android:endColor="#002EE6A0" />
+                android:endColor="#00030B08" />
         </shape>
     </item>
 </layer-list>

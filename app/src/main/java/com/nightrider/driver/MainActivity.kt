@@ -6,10 +6,13 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -48,6 +51,7 @@ class MainActivity : Activity() {
     private lateinit var boardStatus: TextView
     private lateinit var openRides: LinearLayout
     private lateinit var myRides: LinearLayout
+    private lateinit var chatReplyHint: TextView
     private lateinit var chatLog: ScrollView
     private lateinit var chatContent: LinearLayout
     private lateinit var chatText: EditText
@@ -58,12 +62,27 @@ class MainActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private val ridesBusy = AtomicBoolean(false)
     private val chatBusy = AtomicBoolean(false)
+    private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
+    private val shownChatIds = HashSet<String>()
+    private var chatReplyTarget: JSONObject? = null
     private var shownName = ""
     private var stage = "available"
     private var running = false
     private var ridesSignature = ""
+    private var latestLocation: Location? = null
+    private var locationUpdatesRegistered = false
+    private val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            latestLocation = Location(location)
+            updateLocationLine()
+        }
+        override fun onProviderEnabled(provider: String) { updateLocationLine() }
+        override fun onProviderDisabled(provider: String) { updateLocationLine() }
+        @Deprecated("Legacy callback for Android 8-10")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) { }
+    }
 
     /** Mirrors the server's workflow so the app still works if config is slow. */
     private val statusLabels = mapOf(
@@ -104,7 +123,7 @@ class MainActivity : Activity() {
         override fun run() {
             if (!running) return
             pingDriver()
-            main.postDelayed(this, 20_000)
+            main.postDelayed(this, 10_000)
         }
     }
 
@@ -112,17 +131,25 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = Prefs(this)
+        Api.sessionToken = prefs.sessionToken
 
         loginScroll = findViewById(R.id.loginScroll)
+        val loginGrid = NightGridDrawable()
+        loginScroll.background = loginGrid
+        loginScroll.setOnScrollChangeListener { _, _, y, _, _ -> loginGrid.setParallaxOffset(y) }
         nameInput = findViewById(R.id.nameInput)
         passInput = findViewById(R.id.passInput)
         loginButton = findViewById(R.id.loginButton)
         loginError = findViewById(R.id.loginError)
         boardPanel = findViewById(R.id.boardPanel)
+        val boardGrid = NightGridDrawable()
+        boardPanel.background = boardGrid
+        findViewById<ScrollView>(R.id.boardScroll).setOnScrollChangeListener { _, _, y, _, _ -> boardGrid.setParallaxOffset(y) }
         driverLine = findViewById(R.id.driverLine)
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
         myRides = findViewById(R.id.myRides)
+        chatReplyHint = findViewById(R.id.chatReplyHint)
         chatLog = findViewById(R.id.chatLog)
         chatContent = findViewById(R.id.chatContent)
         chatText = findViewById(R.id.chatText)
@@ -158,13 +185,17 @@ class MainActivity : Activity() {
         super.onResume()
         applyKeepAwake()
         val name = prefs.driverName
-        if (name.isBlank()) {
+        if (!prefs.loggedIn) {
+            if (name.isNotBlank()) prefs.logout()
             stopPolling()
             showLogin()
         } else {
             if (shownName != name) {
                 shownName = name
                 chatSeen = 0.0
+                shownChatIds.clear()
+                chatReplyTarget = null
+                chatReplyHint.visibility = View.GONE
                 ridesSignature = ""
                 chatContent.removeAllViews()
                 openRides.removeAllViews()
@@ -202,33 +233,50 @@ class MainActivity : Activity() {
     private fun showBoard(name: String) {
         loginScroll.visibility = View.GONE
         boardPanel.visibility = View.VISIBLE
-        driverLine.text = getString(R.string.signed_in_as, name)
+        updateLocationLine()
+        driverLine.setOnClickListener {
+            if (!hasLocationPermission()) {
+                maybeAskLocation()
+            } else {
+                val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                    !manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                } else {
+                    stopLocationUpdates()
+                    startLocationUpdates()
+                }
+            }
+        }
     }
 
-    /**
-     * Placeholder sign-in: any driver name is accepted and the password field is
-     * not checked at all — blank or any value works. No PIN is stored, so this
-     * only records the name and confirms the server can reach the driver.
-     */
     private fun attemptLogin() {
-        val name = nameInput.text.toString().trim()
+        val username = nameInput.text.toString().trim()
+        val password = passInput.text.toString()
         loginError.text = ""
 
-        if (name.isEmpty()) {
-            loginError.text = getString(R.string.err_name)
+        if (username.isEmpty() || password.isEmpty()) {
+            loginError.text = getString(R.string.err_credentials)
             return
         }
 
         loginButton.isEnabled = false
         io.execute {
             try {
-                // Confirm the server knows how to reach this driver.
-                Api.post(
-                    "/api/drivers/ping",
-                    JSONObject().put("name", name).put("status", "available")
+                val response = Api.post(
+                    "/api/auth/login",
+                    JSONObject().put("username", username).put("password", password)
                 )
+                val user = response.optJSONObject("user") ?: throw ApiException(401, "Sign-in failed.")
+                if (user.optString("role") != "driver") {
+                    throw ApiException(403, "This account is not a driver account.")
+                }
+                val token = response.optString("token")
+                if (token.isBlank()) throw ApiException(401, "The server did not start a session. Try again.")
+                val displayName = user.optString("display_name", username)
                 main.post {
-                    prefs.login(name)
+                    prefs.login(username, displayName, token)
+                    Api.sessionToken = token
                     passInput.setText("")
                     loginButton.isEnabled = true
                     maybeAskLocation()
@@ -271,6 +319,7 @@ class MainActivity : Activity() {
     private fun startPolling() {
         if (running) return
         running = true
+        startLocationUpdates()
         main.post(rideTick)
         main.post(chatTick)
         main.post(pingTick)
@@ -278,6 +327,7 @@ class MainActivity : Activity() {
 
     private fun stopPolling() {
         running = false
+        stopLocationUpdates()
         main.removeCallbacks(rideTick)
         main.removeCallbacks(chatTick)
         main.removeCallbacks(pingTick)
@@ -286,11 +336,19 @@ class MainActivity : Activity() {
     private fun pingDriver() {
         val name = prefs.driverName
         if (name.isBlank()) return
+        val fix = freshLocation()
+        val body = JSONObject().put("name", name).put("status", stage)
+            .put("location_sharing", hasLocationPermission())
+        if (fix != null) {
+            body.put("coords", JSONObject().put("lat", fix.latitude).put("lng", fix.longitude))
+                .put("location_at", fix.time / 1000.0)
+            if (fix.hasAccuracy()) body.put("accuracy", fix.accuracy.toDouble())
+        }
         io.execute {
             try {
                 Api.post(
                     "/api/drivers/ping",
-                    JSONObject().put("name", name).put("status", stage)
+                    body
                 )
             } catch (ignored: Exception) {
                 // Presence is best effort; the ride poll reports real failures.
@@ -312,7 +370,8 @@ class MainActivity : Activity() {
                     val ride = all.optJSONObject(i) ?: continue
                     val status = ride.optString("status")
                     val driver = ride.optString("driver")
-                    if (status == "requested" && driver.isBlank()) {
+                    val unassigned = ride.isNull("driver") || driver.isBlank()
+                    if (status == "requested" && unassigned) {
                         open.add(ride)
                     } else if (driver == name) {
                         mine.add(ride)
@@ -325,7 +384,16 @@ class MainActivity : Activity() {
                 stage = if (live.isEmpty()) "available" else live.last().optString("status", "available")
                 runOnUiThread { renderRides(open, mine) }
             } catch (e: Exception) {
-                runOnUiThread { boardStatus.text = getString(R.string.board_offline, friendly(e)) }
+                runOnUiThread {
+                    if (e is ApiException && e.status == 401) {
+                        prefs.logout()
+                        Api.sessionToken = ""
+                        stopPolling()
+                        showLogin()
+                    } else {
+                        boardStatus.text = getString(R.string.board_offline, friendly(e))
+                    }
+                }
             } finally {
                 ridesBusy.set(false)
             }
@@ -429,6 +497,9 @@ class MainActivity : Activity() {
             if (status == "completed") {
                 row.addView(actionButton(getString(R.string.action_rate)) { rateDialog(rideId) })
             }
+            if (status != "completed" && status != "cancelled") {
+                row.addView(actionButton(getString(R.string.action_cancel_ride)) { confirmCancelRide(rideId) })
+            }
         }
         if (row.childCount > 0) card.addView(row)
 
@@ -520,6 +591,30 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun confirmCancelRide(rideId: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.cancel_ride_title)
+            .setMessage(R.string.cancel_ride_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.action_cancel_ride) { _, _ -> cancelRide(rideId) }
+            .show()
+    }
+
+    private fun cancelRide(rideId: String) {
+        io.execute {
+            try {
+                Api.post("/api/rides/" + Api.enc(rideId) + "/cancel", JSONObject())
+                main.post {
+                    boardStatus.text = getString(R.string.cancel_ride_done)
+                    ridesSignature = ""
+                    refreshRides()
+                }
+            } catch (e: Exception) {
+                main.post { boardStatus.text = getString(R.string.action_failed, friendly(e)) }
+            }
+        }
+    }
+
     private fun rateDialog(rideId: String) {
         val stars = arrayOf("1 \u2605", "2 \u2605", "3 \u2605", "4 \u2605", "5 \u2605")
         AlertDialog.Builder(this)
@@ -552,20 +647,73 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun currentCoords(): Pair<Double, Double>? {
+    private fun hasLocationPermission(): Boolean {
         val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
         val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-        if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
-            return null
-        }
+        return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun isRecent(location: Location): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+        return ageMs in 0..110_000L
+    }
+
+    private fun freshLocation(): Location? {
+        if (!hasLocationPermission()) return null
+        latestLocation?.takeIf { isRecent(it) }?.let { return it }
         return try {
-            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            if (loc == null) null else Pair(loc.latitude, loc.longitude)
-        } catch (e: Exception) {
-            null
+            val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            manager.allProviders.mapNotNull { provider ->
+                try { manager.getLastKnownLocation(provider) } catch (_: Exception) { null }
+            }.filter { isRecent(it) }.maxByOrNull { it.elapsedRealtimeNanos }
+        } catch (_: Exception) { null }
+    }
+
+    private fun updateLocationLine() {
+        val name = prefs.driverName
+        val message = when {
+            !hasLocationPermission() -> "Location off · tap here to enable Dispatch location"
+            freshLocation() != null -> "Sharing location with Dispatch while this app is open"
+            else -> "Waiting for GPS · tap here to check location settings"
         }
+        driverLine.text = getString(R.string.signed_in_as, name) + "\n" + message
+    }
+
+    private fun startLocationUpdates() {
+        if (!running || locationUpdatesRegistered || !hasLocationPermission()) {
+            updateLocationLine()
+            return
+        }
+        val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+            try {
+                if (manager.isProviderEnabled(provider)) {
+                    manager.requestLocationUpdates(provider, 10_000L, 0f, locationListener, Looper.getMainLooper())
+                    locationUpdatesRegistered = true
+                }
+            } catch (_: Exception) { /* Approximate-only access may exclude GPS. */ }
+        }
+        updateLocationLine()
+    }
+
+    private fun stopLocationUpdates() {
+        try {
+            (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(locationListener)
+        } catch (_: Exception) { }
+        locationUpdatesRegistered = false
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 91 && prefs.loggedIn && running) {
+            startLocationUpdates()
+            pingDriver()
+        }
+    }
+
+    private fun currentCoords(): Pair<Double, Double>? {
+        val location = freshLocation() ?: return null
+        return Pair(location.latitude, location.longitude)
     }
 
     // ---- team text -------------------------------------------------------
@@ -576,23 +724,20 @@ class MainActivity : Activity() {
         val since = chatSeen
         io.execute {
             try {
-                val res = Api.get(
-                    "/api/drivers/" + Api.enc(name) + "/messages?since=" +
-                        String.format(Locale.US, "%.3f", since)
-                )
+                val res = Api.get("/api/chat/messages?since=" + String.format(Locale.US, "%.3f", since))
                 val messages = res.optJSONArray("messages") ?: JSONArray()
                 val fresh = ArrayList<JSONObject>()
                 for (i in 0 until messages.length()) {
                     val message = messages.optJSONObject(i) ?: continue
+                    val unique = message.optString("message_kind") + ":" + message.optString("id")
+                    if (!shownChatIds.add(unique)) continue
                     val at = message.optDouble("at", 0.0)
                     if (at > chatSeen) chatSeen = at
                     fresh.add(message)
                 }
-                if (fresh.isNotEmpty()) {
-                    runOnUiThread {
-                        fresh.forEach { addChatBubble(it) }
-                        chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
-                    }
+                if (fresh.isNotEmpty()) runOnUiThread {
+                    fresh.forEach { addChatBubble(it) }
+                    chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
                 }
             } catch (ignored: Exception) {
                 // Chat is a side channel; the ride board already shows outages.
@@ -603,94 +748,125 @@ class MainActivity : Activity() {
     }
 
     private fun addChatBubble(message: JSONObject) {
-        val me = prefs.driverName
         val from = message.optString("from")
-        val mine = from == me
-        val priv = message.optString("channel") == "private"
-
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        row.gravity = if (mine) Gravity.END else Gravity.START
-        val lp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        lp.bottomMargin = dp(6)
-        row.layoutParams = lp
-
-        val bubble = LinearLayout(this)
-        bubble.orientation = LinearLayout.VERTICAL
-        bubble.setBackgroundResource(
-            when {
-                priv -> R.drawable.bubble_private
-                mine -> R.drawable.bubble_me
-                else -> R.drawable.bubble_them
-            }
-        )
-        val pad = dp(10)
-        bubble.setPadding(pad, dp(7), pad, dp(7))
-
-        val maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt()
-        val who = TextView(this)
-        when {
-            priv -> {
-                who.text = if (mine) {
-                    getString(R.string.chat_private)
-                } else {
-                    getString(R.string.chat_private_from, from)
-                }
-                who.setTextColor(getColor(R.color.plum))
-                who.textSize = 9f
-                bubble.addView(who)
-            }
-            !mine && from.isNotBlank() -> {
-                who.text = from
-                who.setTextColor(getColor(R.color.cyan))
-                who.textSize = 10f
-                bubble.addView(who)
+        val mine = message.optBoolean("mine")
+        val priv = message.optString("channel") == "private" ||
+            message.optString("audience") == "dispatch"
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = if (mine) Gravity.END else Gravity.START
+            val lp = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            lp.bottomMargin = dp(6); layoutParams = lp
+        }
+        val bubble = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(if (priv) R.drawable.bubble_private else if (mine) R.drawable.bubble_me else R.drawable.bubble_them)
+            val pad = dp(10); setPadding(pad, dp(7), pad, dp(7))
+        }
+        val color = try { android.graphics.Color.parseColor(message.optString("chat_color", "#ffffff")) }
+            catch (_: Exception) { getColor(R.color.ice) }
+        val who = TextView(this).apply {
+            text = (if (mine) "You" else from) +
+                (if (message.has("ride_id")) " · Ride " + message.optString("ride_id") else "") +
+                (if (priv) " · private" else "")
+            setTextColor(color); textSize = 10f
+        }
+        bubble.addView(who)
+        val body = TextView(this).apply {
+            text = message.optString("text")
+            setTextColor(getColor(R.color.ice)); textSize = 13f
+            maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt() - dp(20)
+        }
+        bubble.addView(body)
+        val at = message.optDouble("at", 0.0)
+        val time = TextView(this).apply {
+            text = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date((at * 1000).toLong()))
+            setTextColor(getColor(R.color.mist)); textSize = 9f
+        }
+        bubble.addView(time); row.addView(bubble)
+        if (priv) {
+            android.animation.ObjectAnimator.ofFloat(bubble, "elevation", dp(2).toFloat(), dp(12).toFloat()).apply {
+                duration = 1250; repeatMode = android.animation.ValueAnimator.REVERSE
+                repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
         }
-
-        val body = TextView(this)
-        body.text = message.optString("text")
-        body.setTextColor(getColor(R.color.ice))
-        body.textSize = 13f
-        body.maxWidth = maxWidth - dp(20)
-        bubble.addView(body)
-
-        val at = message.optDouble("at", 0.0)
-        val time = TextView(this)
-        time.text = DateFormat.getTimeInstance(DateFormat.SHORT)
-            .format(Date((at * 1000).toLong()))
-        time.setTextColor(getColor(R.color.mist))
-        time.textSize = 9f
-        bubble.addView(time)
-
-        row.addView(bubble)
+        if (!mine) {
+            val reply = Button(this).apply {
+                text = "Reply"; isAllCaps = false
+                setOnClickListener { beginChatReply(message) }
+            }
+            row.addView(reply)
+        }
         chatContent.addView(row)
+    }
+
+    private fun beginChatReply(message: JSONObject) {
+        val target = JSONObject()
+        val rideId = message.optString("ride_id")
+        val role = message.optString("role")
+        val label: String
+        if (rideId.isNotBlank()) {
+            target.put("ride_id", rideId)
+            target.put("audience", if (message.optString("audience") == "dispatch") "dispatch" else "shared")
+            label = "Replying in ride " + rideId + " — tap here to cancel"
+        } else if (role == "dispatch") {
+            target.put("private", true)
+            label = "Replying privately to Dispatch — tap here to cancel"
+        } else {
+            chatReplyTarget = null
+            chatReplyHint.visibility = View.GONE
+            chatPrivate.visibility = View.VISIBLE
+            chatText.hint = getString(R.string.chat_hint)
+            return
+        }
+        chatReplyTarget = target
+        chatReplyHint.text = label
+        chatReplyHint.visibility = View.VISIBLE
+        chatReplyHint.setOnClickListener {
+            chatReplyTarget = null; chatReplyHint.visibility = View.GONE
+            chatPrivate.visibility = View.VISIBLE; chatPrivate.isChecked = false
+            chatText.hint = getString(R.string.chat_hint)
+        }
+        chatPrivate.visibility = View.GONE
+        chatText.hint = if (rideId.isNotBlank()) getString(R.string.ride_chat_hint) else "Private note to Dispatch"
+        chatText.requestFocus()
     }
 
     private fun sendChat() {
         val name = prefs.driverName
         if (name.isBlank()) return
         val text = chatText.text.toString().trim()
-        if (text.isEmpty()) return
-        val priv = chatPrivate.isChecked
+        if (text.isEmpty() || !chatSending.compareAndSet(false, true)) return
+        val body = JSONObject().put("text", text)
+        chatReplyTarget?.let { target ->
+            val keys = target.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                body.put(key, target.get(key))
+            }
+        }
+        if (chatReplyTarget == null && chatPrivate.isChecked) body.put("private", true)
         chatSend.isEnabled = false
         io.execute {
             try {
-                Api.post(
-                    "/api/drivers/" + Api.enc(name) + "/message",
-                    JSONObject().put("text", text).put("private", priv)
-                )
+                Api.post("/api/chat/messages", body)
                 main.post {
                     chatText.setText("")
                     chatSend.isEnabled = true
+                    chatSending.set(false)
+                    chatReplyTarget = null
+                    chatReplyHint.visibility = View.GONE
+                    chatPrivate.visibility = View.VISIBLE
+                    chatPrivate.isChecked = false
+                    chatText.hint = getString(R.string.chat_hint)
                     refreshChat()
                 }
             } catch (e: Exception) {
                 main.post {
                     chatSend.isEnabled = true
+                    chatSending.set(false)
                     boardStatus.text = getString(R.string.action_failed, friendly(e))
                 }
             }
@@ -718,3 +894,5 @@ class MainActivity : Activity() {
         else -> e.message ?: e.javaClass.simpleName
     }
 }
+
+

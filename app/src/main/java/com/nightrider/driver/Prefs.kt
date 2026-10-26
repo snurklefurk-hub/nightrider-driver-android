@@ -2,78 +2,107 @@ package com.nightrider.driver
 
 import android.content.Context
 import android.content.SharedPreferences
-import java.security.MessageDigest
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
-/**
- * Local settings for the driver app.
- *
- * The backend has no driver accounts: a driver is identified by the name they
- * type, and the app carries that name on every request.
- *
- * Sign-in is currently a placeholder: any name is accepted and the password is
- * not checked, so nothing is stored for it and the PIN helpers below are kept
- * only for a later, real sign-in. Only the driver name is persisted.
- */
+/** Local preferences plus an Android Keystore protected NightRider session. */
 class Prefs(ctx: Context) {
 
     private val sp: SharedPreferences =
         ctx.applicationContext.getSharedPreferences("nightrider_driver", Context.MODE_PRIVATE)
 
-    /** The driver signed in right now. Empty when signed out. */
     var driverName: String
         get() = sp.getString(KEY_NAME, "") ?: ""
-        set(value) = sp.edit().putString(KEY_NAME, value).apply()
+        private set(value) = sp.edit().putString(KEY_NAME, value).apply()
 
-    /** Last name used, kept so the sign-in field is pre-filled after logout. */
+    var username: String
+        get() = sp.getString(KEY_USERNAME, "") ?: ""
+        private set(value) = sp.edit().putString(KEY_USERNAME, value).apply()
+
     var lastName: String
         get() = sp.getString(KEY_LAST, "") ?: ""
         set(value) = sp.edit().putString(KEY_LAST, value).apply()
+
+    var sessionToken: String
+        get() = readToken()
+        private set(value) = writeToken(value)
 
     var keepAwake: Boolean
         get() = sp.getBoolean(KEY_AWAKE, true)
         set(value) = sp.edit().putBoolean(KEY_AWAKE, value).apply()
 
     val loggedIn: Boolean
-        get() = driverName.isNotBlank()
+        get() = driverName.isNotBlank() && sessionToken.isNotBlank()
 
-    fun hasPin(name: String): Boolean = sp.contains(pinKey(name))
-
-    fun pinMatches(name: String, pin: String): Boolean =
-        sp.getString(pinKey(name), null) == digest(name, pin)
-
-    fun setPin(name: String, pin: String) {
-        sp.edit().putString(pinKey(name), digest(name, pin)).apply()
-    }
-
-    fun clearPin(name: String) {
-        if (name.isNotBlank()) sp.edit().remove(pinKey(name)).apply()
-    }
-
-    fun login(name: String) {
-        lastName = name
-        driverName = name
+    fun login(user: String, displayName: String, token: String) {
+        lastName = user
+        username = user
+        driverName = displayName
+        sessionToken = token
     }
 
     fun logout() {
-        sp.edit().remove(KEY_NAME).apply()
+        sp.edit().remove(KEY_NAME).remove(KEY_USERNAME).remove(KEY_TOKEN).apply()
     }
 
-    private fun pinKey(name: String) = "pin_" + name.trim().lowercase()
+    private fun readToken(): String {
+        val encoded = sp.getString(KEY_TOKEN, null) ?: return ""
+        return try {
+            val packed = Base64.decode(encoded, Base64.NO_WRAP)
+            val ivSize = 12
+            if (packed.size <= ivSize) return ""
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, packed, 0, ivSize))
+            String(cipher.doFinal(packed.copyOfRange(ivSize, packed.size)), Charsets.UTF_8)
+        } catch (_: Exception) {
+            sp.edit().remove(KEY_TOKEN).apply()
+            ""
+        }
+    }
 
-    private fun digest(name: String, pin: String): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val bytes = md.digest((name.trim().lowercase() + ":" + pin).toByteArray(Charsets.UTF_8))
-        val sb = StringBuilder(bytes.size * 2)
-        for (b in bytes) sb.append("%02x".format(b))
-        return sb.toString()
+    private fun writeToken(token: String) {
+        if (token.isBlank()) {
+            sp.edit().remove(KEY_TOKEN).apply()
+            return
+        }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
+        val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
+        val packed = cipher.iv + encrypted
+        sp.edit().putString(KEY_TOKEN, Base64.encodeToString(packed, Base64.NO_WRAP)).apply()
+    }
+
+    private fun secretKey(): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        generator.init(
+            KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
+                .build()
+        )
+        return generator.generateKey()
     }
 
     companion object {
-        /** The one server the app ever talks to. Not configurable at runtime. */
         const val SERVER = "https://nightrider.onrender.com"
-
+        private const val KEY_ALIAS = "nightrider_session_key"
         private const val KEY_NAME = "driver_name"
-        private const val KEY_LAST = "last_name"
+        private const val KEY_USERNAME = "driver_username"
+        private const val KEY_LAST = "last_username"
+        private const val KEY_TOKEN = "session_token_encrypted"
         private const val KEY_AWAKE = "keep_awake"
     }
 }
+
