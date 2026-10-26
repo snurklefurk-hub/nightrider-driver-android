@@ -6,10 +6,13 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -68,6 +71,18 @@ class MainActivity : Activity() {
     private var stage = "available"
     private var running = false
     private var ridesSignature = ""
+    private var latestLocation: Location? = null
+    private var locationUpdatesRegistered = false
+    private val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            latestLocation = Location(location)
+            updateLocationLine()
+        }
+        override fun onProviderEnabled(provider: String) { updateLocationLine() }
+        override fun onProviderDisabled(provider: String) { updateLocationLine() }
+        @Deprecated("Legacy callback for Android 8-10")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) { }
+    }
 
     /** Mirrors the server's workflow so the app still works if config is slow. */
     private val statusLabels = mapOf(
@@ -108,7 +123,7 @@ class MainActivity : Activity() {
         override fun run() {
             if (!running) return
             pingDriver()
-            main.postDelayed(this, 20_000)
+            main.postDelayed(this, 10_000)
         }
     }
 
@@ -215,7 +230,21 @@ class MainActivity : Activity() {
     private fun showBoard(name: String) {
         loginScroll.visibility = View.GONE
         boardPanel.visibility = View.VISIBLE
-        driverLine.text = getString(R.string.signed_in_as, name)
+        updateLocationLine()
+        driverLine.setOnClickListener {
+            if (!hasLocationPermission()) {
+                maybeAskLocation()
+            } else {
+                val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                    !manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                } else {
+                    stopLocationUpdates()
+                    startLocationUpdates()
+                }
+            }
+        }
     }
 
     private fun attemptLogin() {
@@ -287,6 +316,7 @@ class MainActivity : Activity() {
     private fun startPolling() {
         if (running) return
         running = true
+        startLocationUpdates()
         main.post(rideTick)
         main.post(chatTick)
         main.post(pingTick)
@@ -294,6 +324,7 @@ class MainActivity : Activity() {
 
     private fun stopPolling() {
         running = false
+        stopLocationUpdates()
         main.removeCallbacks(rideTick)
         main.removeCallbacks(chatTick)
         main.removeCallbacks(pingTick)
@@ -302,11 +333,19 @@ class MainActivity : Activity() {
     private fun pingDriver() {
         val name = prefs.driverName
         if (name.isBlank()) return
+        val fix = freshLocation()
+        val body = JSONObject().put("name", name).put("status", stage)
+            .put("location_sharing", hasLocationPermission())
+        if (fix != null) {
+            body.put("coords", JSONObject().put("lat", fix.latitude).put("lng", fix.longitude))
+                .put("location_at", fix.time / 1000.0)
+            if (fix.hasAccuracy()) body.put("accuracy", fix.accuracy.toDouble())
+        }
         io.execute {
             try {
                 Api.post(
                     "/api/drivers/ping",
-                    JSONObject().put("name", name).put("status", stage)
+                    body
                 )
             } catch (ignored: Exception) {
                 // Presence is best effort; the ride poll reports real failures.
@@ -605,20 +644,73 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun currentCoords(): Pair<Double, Double>? {
+    private fun hasLocationPermission(): Boolean {
         val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
         val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-        if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
-            return null
-        }
+        return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun isRecent(location: Location): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+        return ageMs in 0..110_000L
+    }
+
+    private fun freshLocation(): Location? {
+        if (!hasLocationPermission()) return null
+        latestLocation?.takeIf { isRecent(it) }?.let { return it }
         return try {
-            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            if (loc == null) null else Pair(loc.latitude, loc.longitude)
-        } catch (e: Exception) {
-            null
+            val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            manager.allProviders.mapNotNull { provider ->
+                try { manager.getLastKnownLocation(provider) } catch (_: Exception) { null }
+            }.filter { isRecent(it) }.maxByOrNull { it.elapsedRealtimeNanos }
+        } catch (_: Exception) { null }
+    }
+
+    private fun updateLocationLine() {
+        val name = prefs.driverName
+        val message = when {
+            !hasLocationPermission() -> "Location off · tap here to enable Dispatch location"
+            freshLocation() != null -> "Sharing location with Dispatch while this app is open"
+            else -> "Waiting for GPS · tap here to check location settings"
         }
+        driverLine.text = getString(R.string.signed_in_as, name) + "\n" + message
+    }
+
+    private fun startLocationUpdates() {
+        if (!running || locationUpdatesRegistered || !hasLocationPermission()) {
+            updateLocationLine()
+            return
+        }
+        val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+            try {
+                if (manager.isProviderEnabled(provider)) {
+                    manager.requestLocationUpdates(provider, 10_000L, 0f, locationListener, Looper.getMainLooper())
+                    locationUpdatesRegistered = true
+                }
+            } catch (_: Exception) { /* Approximate-only access may exclude GPS. */ }
+        }
+        updateLocationLine()
+    }
+
+    private fun stopLocationUpdates() {
+        try {
+            (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(locationListener)
+        } catch (_: Exception) { }
+        locationUpdatesRegistered = false
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 91 && prefs.loggedIn && running) {
+            startLocationUpdates()
+            pingDriver()
+        }
+    }
+
+    private fun currentCoords(): Pair<Double, Double>? {
+        val location = freshLocation() ?: return null
+        return Pair(location.latitude, location.longitude)
     }
 
     // ---- team text -------------------------------------------------------
@@ -799,4 +891,5 @@ class MainActivity : Activity() {
         else -> e.message ?: e.javaClass.simpleName
     }
 }
+
 
