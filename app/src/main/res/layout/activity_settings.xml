@@ -126,6 +126,14 @@
             android:layout_marginTop="20dp"
             android:text="Map simulator" />
 
+        <Button
+            android:id="@+id/mapFieldTest"
+            style="@style/NrButton.Alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Field test (live GPS)" />
+
         <CheckBox
             android:id="@+id/keepAwake"
             android:layout_width="match_parent"

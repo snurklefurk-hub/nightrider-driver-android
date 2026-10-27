@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
+import org.maplibre.android.gestures.MoveGestureDetector
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -54,6 +55,18 @@ class DriverMapActivity : Activity(), LocationListener {
     private var routePoints: List<LatLng> = emptyList()
     private var fittedRide = ""
     private var simulation: MapSimulationPanel? = null
+    private var fieldTest: FieldTestPanel? = null
+    private var fieldRouteStatus = "Long-press map to set a test destination."
+    private var fieldCameraReady = false
+    private val fieldRefresh = object : Runnable {
+        override fun run() {
+            if (active && fieldTest != null) {
+                fieldTest?.refreshDiagnostics()
+                updateMap()
+                main.postDelayed(this, 4000)
+            }
+        }
+    }
     private val tick = object : Runnable {
         override fun run() { if (active) { refreshRide(); main.postDelayed(this, 6000) } }
     }
@@ -73,6 +86,9 @@ class DriverMapActivity : Activity(), LocationListener {
         if (intent.getBooleanExtra("simulation", false)) {
             simulation = MapSimulationPanel(this, savedInstanceState) { updateMap() }
             root.addView(simulation!!.view)
+        } else if (intent.getBooleanExtra("field_test", false)) {
+            fieldTest = FieldTestPanel(this, { updateMap() }, { fieldDestinationChanged() })
+            root.addView(fieldTest!!.view)
         }
         root.addView(mapView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
@@ -80,6 +96,19 @@ class DriverMapActivity : Activity(), LocationListener {
         mapView.getMapAsync { ready ->
             map = ready
             ready.setMinPitchPreference(0.0); ready.setMaxPitchPreference(0.0)
+            if (fieldTest != null) {
+                ready.addOnMapLongClickListener { point ->
+                    fieldTest?.setDestination(point)
+                    true
+                }
+                ready.addOnMoveListener(object : MapLibreMap.OnMoveListener {
+                    override fun onMoveBegin(detector: MoveGestureDetector) {
+                        fieldTest?.setFollow(false)
+                    }
+                    override fun onMove(detector: MoveGestureDetector) {}
+                    override fun onMoveEnd(detector: MoveGestureDetector) {}
+                })
+            }
             ready.cameraPosition = CameraPosition.Builder().target(LatLng(32.0811, -81.0911)).zoom(12.0).tilt(0.0).build()
             val styleUrl = if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
                 else "https://tiles.openfreemap.org/styles/dark"
@@ -89,17 +118,28 @@ class DriverMapActivity : Activity(), LocationListener {
             }
         }
     }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FieldTestPanel.EXPORT_CSV_REQUEST && resultCode == RESULT_OK) {
+            data?.data?.let { fieldTest?.writeCsv(it) }
+        }
+    }
+
     override fun onStart() { super.onStart(); mapView.onStart() }
     override fun onResume() {
         super.onResume(); mapView.onResume()
-        if (simulation == null && !prefs.loggedIn) { finish(); return }
+        if (simulation == null && fieldTest == null && !prefs.loggedIn) { finish(); return }
         active = true
-        if (simulation != null) simulation!!.resume()
-        else { startLocation(); main.post(tick) }
+        when {
+            simulation != null -> simulation!!.resume()
+            fieldTest != null -> { startLocation(); main.post(fieldRefresh) }
+            else -> { startLocation(); main.post(tick) }
+        }
     }
     override fun onPause() {
-        active = false; main.removeCallbacks(tick)
+        active = false; main.removeCallbacks(tick); main.removeCallbacks(fieldRefresh)
         simulation?.pause()
+        fieldTest?.pause()
         if (simulation == null) (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
         mapView.onPause(); super.onPause()
     }
@@ -112,7 +152,14 @@ class DriverMapActivity : Activity(), LocationListener {
         if (simulation != null) return
         val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!fine && !coarse) { status.text = "Allow location on the driver board to show your position."; return }
+        if (!fine && !coarse) {
+            if (fieldTest != null) {
+                status.text = "Allow location permission to test live GPS (no dispatch sharing)."
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION), 92)
+            } else status.text = "Allow location on the driver board to show your position."
+            return
+        }
         val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
             for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
@@ -124,7 +171,18 @@ class DriverMapActivity : Activity(), LocationListener {
         } catch (_: SecurityException) { status.text = "Location permission is unavailable." }
         updateMap()
     }
-    override fun onLocationChanged(value: Location) { location = Location(value); updateMap() }
+    override fun onLocationChanged(value: Location) {
+        location = Location(value)
+        fieldTest?.onFix(value)
+        updateMap()
+    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 92 && fieldTest != null && active) {
+            if (grantResults.any { it == PackageManager.PERMISSION_GRANTED }) startLocation()
+            else status.text = "GPS denied. Enable location for NightRider in Android Settings."
+        }
+    }
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {}
     @Deprecated("Legacy Android callback") override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
@@ -152,6 +210,7 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     private fun driverPoint(): LatLng? = location?.takeIf { System.currentTimeMillis() - it.time < 120000 }?.let { LatLng(it.latitude, it.longitude) }
     private fun centerMap() {
+        fieldTest?.setFollow(true)
         val target = driverPoint() ?: point(ride?.optJSONArray("pickup_coords")) ?: LatLng(32.0811, -81.0911)
         map?.animateCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(target, 14.0))
     }
@@ -159,6 +218,7 @@ class DriverMapActivity : Activity(), LocationListener {
         val m = map ?: return
         if (m.style == null) return
         val sim = simulation
+        if (fieldTest != null) { drawFieldMap(m); return }
         if (sim != null) {
             ride = sim.sampleRide()
             location = sim.sampleLocation()
@@ -208,6 +268,94 @@ class DriverMapActivity : Activity(), LocationListener {
             }
         }
     }
+
+    private fun drawFieldMap(m: MapLibreMap) {
+        val panel = fieldTest ?: return
+        val driver = driverPoint()
+        m.clear()
+        driver?.let { m.addMarker(MarkerOptions().position(it).title("Live GPS · field test")) }
+        panel.destination?.let { m.addMarker(MarkerOptions().position(it).title("Test destination")) }
+        if (routePoints.size >= 2) {
+            m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(46, 230, 160)).width(5f))
+        }
+        val trail = panel.trail()
+        if (trail.size >= 2) {
+            m.addPolyline(PolylineOptions().addAll(trail).color(Color.rgb(255, 171, 58)).width(4f))
+        }
+        if (panel.follow && driver != null) {
+            val camera = org.maplibre.android.camera.CameraUpdateFactory
+            if (!fieldCameraReady) {
+                m.animateCamera(camera.newLatLngZoom(driver, 15.0))
+                fieldCameraReady = true
+            } else m.animateCamera(camera.newLatLng(driver), 400)
+        }
+        val fix = location
+        val separation = if (driver != null && routePoints.size >= 2) {
+            FieldRouteMath.distanceMeters(SimulationPoint(driver.latitude, driver.longitude),
+                routePoints.map { SimulationPoint(it.latitude, it.longitude) })
+        } else null
+        val deviationLabel = if (separation != null && fix != null && fix.hasAccuracy() &&
+            fix.accuracy <= 50f) {
+            if (separation > 80) " · Off route: " + separation.toInt() + "m"
+            else " · Route offset: " + separation.toInt() + "m"
+        } else ""
+        status.text = "FIELD TEST · " + fieldRouteStatus + deviationLabel
+    }
+
+    private fun fieldDestinationChanged() {
+        routeGeneration++
+        routePoints = emptyList()
+        val destination = fieldTest?.destination
+        if (destination == null) {
+            fieldRouteStatus = "Long-press map to set a test destination."
+            updateMap()
+            return
+        }
+        val driver = driverPoint()
+        if (driver == null) {
+            fieldRouteStatus = "Waiting for fresh GPS. Tap Route again after a fix."
+            updateMap()
+            return
+        }
+        fieldRouteStatus = "Requesting test route from OSRM…"
+        updateMap()
+        val generation = routeGeneration
+        routing.execute {
+            try {
+                val url = "https://router.project-osrm.org/route/v1/driving/" +
+                    driver.longitude + "," + driver.latitude + ";" +
+                    destination.longitude + "," + destination.latitude +
+                    "?overview=full&geometries=geojson"
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 15000
+                val response = try {
+                    if (conn.responseCode != 200) throw Exception("Route unavailable")
+                    conn.inputStream.bufferedReader().use { it.readText() }
+                } finally { conn.disconnect() }
+                val coords = JSONObject(response).getJSONArray("routes")
+                    .getJSONObject(0).getJSONObject("geometry").getJSONArray("coordinates")
+                if (coords.length() !in 2..30000) throw Exception("Invalid route")
+                val points = (0 until coords.length()).map { coords.getJSONArray(it) }
+                    .map { LatLng(it.getDouble(1), it.getDouble(0)) }
+                runOnUiThread {
+                    if (active && generation == routeGeneration && fieldTest != null) {
+                        routePoints = points
+                        fieldRouteStatus = "Planned route (no traffic) · Orange = recorded trail."
+                        updateMap()
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    if (active && generation == routeGeneration && fieldTest != null) {
+                        fieldRouteStatus = "Route unavailable. Test pin and GPS still work."
+                        updateMap()
+                    }
+                }
+            }
+        }
+    }
+
     private fun applyMidnightPalette(style: Style) {
         (style.getLayer("background") as? BackgroundLayer)?.setProperties(
             PropertyFactory.backgroundColor("#172635")

@@ -1,5 +1,40 @@
 # Driver map simulator
 
+## Road testing on an actual phone (Field Test)
+
+From **Settings → Field test (live GPS)**, you can separately test the production
+MapLibre map with the phone's real location **without creating a ride**. Unlike
+the simulator, this screen requires Android location permission and map internet
+access. You do **not** need to be signed into a driver account.
+
+1. **While parked**, open Field Test and allow precise location if comfortable.
+   The map centers on your first usable GPS fix. GPS accuracy, speed, and fix age
+   are shown so poor fixes can be distinguished from map problems.
+2. Long-press anywhere on the map to place a **test destination**. Its planned
+   route is requested once from public OSRM. Tap **Route again** to refresh
+   manually; routes have no traffic or spoken guidance.
+3. Tap **Record new trace** before moving. Orange shows your recorded GPS trail;
+   green shows the OSRM planned route. The top line shows distance from the
+   planned route when the fix is accurate enough. A >80m discrepancy is flagged
+   for testing, **not** used for actual navigation.
+4. Pan the map to disable Follow. Tap **Recenter** to resume following your GPS.
+   **Stop recording** ends collection; **Clear trace** discards it.
+5. Use **Save CSV** to choose a destination with Android's file picker, then
+   open that file in the Web Map Lab for a local overlay. **Share text** instead
+   passes the precise coordinates to an app you explicitly select.
+
+Privacy and scope: location fixes and trails stay in memory, are never
+persisted across screen closure, and are never sent to NightRider, a dispatch
+board, a ride, or another driver. Saving or sharing via CSV is opt-in. A route request
+does send the **current GPS and chosen destination coordinates** to public OSRM;
+the map itself loads OpenFreeMap. The screen requests location only while it is
+visible, and automatically stops recording on leaving. There is no background
+tracking. Up to 1,500 timestamped GPS fixes are retained in memory; older
+samples drop from the visual trail and CSV. This is a test tool, **not**
+turn-by-turn navigation. Have a passenger operate it or park before interacting.
+GPS traces are approximate and do not establish a verified traveled route.
+
+
 Install the latest signed driver update, open **Settings → Map simulator**.
 It uses the actual driver map with synthetic journeys. No account or location
 permission is required for the simulator. It does not send a driver's real
