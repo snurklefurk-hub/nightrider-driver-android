@@ -12,11 +12,25 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <TextView
-            style="@style/NrLabel"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/settings_title" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                style="@style/NrLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_title" />
+
+            <Button
+                android:id="@+id/appearanceToggle"
+                style="@style/NrBarButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
 
         <TextView
             style="@style/NrLabel"
@@ -103,38 +117,6 @@
             android:layout_marginTop="8dp"
             android:text="@string/update_install_button"
             android:visibility="gone" />
-
-        <TextView
-            style="@style/NrLabel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="@string/appearance_section" />
-
-        <RadioGroup
-            android:id="@+id/appearanceMode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <RadioButton
-                android:id="@+id/lightMode"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:minHeight="48dp"
-                android:text="@string/mode_light"
-                android:textColor="?attr/nrText" />
-
-            <RadioButton
-                android:id="@+id/darkMode"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:minHeight="48dp"
-                android:text="@string/mode_dark"
-                android:textColor="?attr/nrText" />
-        </RadioGroup>
 
         <CheckBox
             android:id="@+id/keepAwake"

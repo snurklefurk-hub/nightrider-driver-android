@@ -179,9 +179,8 @@ class AeroThemeTests(unittest.TestCase):
         with open(p("app", "src", "main", "res", "layout",
                     "activity_settings.xml"), encoding="utf-8") as fh:
             layout = fh.read()
-        self.assertIn('android:id="@+id/appearanceMode"', layout)
-        self.assertIn('android:id="@+id/lightMode"', layout)
-        self.assertIn('android:id="@+id/darkMode"', layout)
+        self.assertIn('android:id="@+id/appearanceToggle"', layout)
+        self.assertNotIn('android:id="@+id/appearanceMode"', layout)
         self.assertNotIn('android:id="@+id/aeroTheme"', layout)
         with open(p("nav-prototype", "prototype", "src", "main", "java",
                     "com", "nightrider", "navpreview", "PreviewActivity.kt"),
