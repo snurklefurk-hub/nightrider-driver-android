@@ -17,6 +17,14 @@ the `NightRider-Map-Preview` artifact, or open the `nav-prototype` folder as
 its own project in Android Studio and run `:prototype:assembleDebug`.
 Install its APK on Android 8+ as a second, separate app.
 
+## Optional Frutiger Aero interface
+
+The preview's **Aero UI / Classic UI** button changes only the laboratory
+controls and status panel, using light sky-blue glass and glossy aqua buttons.
+It is saved locally in the preview app's preferences; the Light/Dark vector
+basemaps remain independent. The production Driver app offers Aero separately
+under **Settings → Appearance**.
+
 ## Two ecosystem map modes
 
 The standalone preview uses the same two **vector basemap modes** as the

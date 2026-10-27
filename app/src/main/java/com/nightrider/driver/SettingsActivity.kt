@@ -27,15 +27,20 @@ class SettingsActivity : Activity() {
     private var updateBusy = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        prefs = Prefs(this)
+        if (prefs.aeroEnabled) setTheme(R.style.Theme_NightRider_Aero)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        prefs = Prefs(this)
 
         val settingsScroll = findViewById<ScrollView>(R.id.settingsScroll)
-        val settingsGrid = NightGridDrawable()
-        settingsScroll.background = settingsGrid
-        settingsScroll.setOnScrollChangeListener { _, _, y, _, _ ->
-            settingsGrid.setParallaxOffset(y)
+        if (prefs.aeroEnabled) {
+            settingsScroll.setBackgroundResource(R.drawable.bg_aero_sky)
+        } else {
+            val settingsGrid = NightGridDrawable()
+            settingsScroll.background = settingsGrid
+            settingsScroll.setOnScrollChangeListener { _, _, y, _, _ ->
+                settingsGrid.setParallaxOffset(y)
+            }
         }
 
         val driverValue = findViewById<TextView>(R.id.driverValue)
@@ -60,6 +65,14 @@ class SettingsActivity : Activity() {
         serverValue.text = Prefs.SERVER
         keepAwake.isChecked = prefs.keepAwake
         keepAwake.setOnCheckedChangeListener { _, checked -> prefs.keepAwake = checked }
+        val aeroTheme = findViewById<CheckBox>(R.id.aeroTheme)
+        aeroTheme.isChecked = prefs.aeroEnabled
+        aeroTheme.setOnCheckedChangeListener { _, enabled ->
+            if (enabled != prefs.aeroEnabled) {
+                prefs.aeroEnabled = enabled
+                recreate() // Keep the active session; re-inflate with the matching theme.
+            }
+        }
 
         val name = prefs.driverName
         driverValue.text = if (name.isBlank()) getString(R.string.not_signed_in) else name
