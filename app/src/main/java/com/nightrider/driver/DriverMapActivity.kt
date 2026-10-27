@@ -13,7 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
 import org.maplibre.android.gestures.MoveGestureDetector
-import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.json.JSONArray
@@ -22,6 +22,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -40,6 +41,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 class DriverMapActivity : Activity(), LocationListener {
     private lateinit var mapView: MapView
     private lateinit var status: TextView
+    private lateinit var hud: NavigationHud
+    private var navigationFollow = true
+    private var rememberedHeading: Double? = null
+    private var routeDistanceM: Double? = null
+    private var routeDurationS: Double? = null
     private lateinit var prefs: Prefs
     private var map: MapLibreMap? = null
     private val main = Handler(Looper.getMainLooper())
@@ -76,13 +82,21 @@ class DriverMapActivity : Activity(), LocationListener {
         if (prefs.aeroEnabled) setTheme(R.style.Theme_NightRider_Aero)
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(if (prefs.aeroEnabled) Color.rgb(225,247,255) else Color.rgb(7,27,18)) }
-        val controls = LinearLayout(this)
-        controls.addView(Button(this).apply { text = "Back"; setOnClickListener { finish() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        controls.addView(Button(this).apply { text = "Recenter"; setOnClickListener { centerMap() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        status = TextView(this).apply { setTextColor(if (prefs.aeroEnabled) Color.rgb(18,61,87) else Color.WHITE); setPadding(20,10,20,10); text = "Loading map…" }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(if (prefs.aeroEnabled) Color.rgb(225,247,255) else Color.rgb(7,27,18))
+        }
+        // Map-first layout: HUD floats over the same MapLibre canvas in every mode.
         mapView = MapView(this)
-        root.addView(controls); root.addView(status)
+        hud = NavigationHud(this, prefs.aeroEnabled, { finish() }, { centerMap() })
+        status = hud.status
+        val mapStage = FrameLayout(this).apply {
+            addView(mapView, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(hud.view, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+        root.addView(mapStage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         if (intent.getBooleanExtra("simulation", false)) {
             simulation = MapSimulationPanel(this, savedInstanceState) { updateMap() }
             root.addView(simulation!!.view)
@@ -90,24 +104,27 @@ class DriverMapActivity : Activity(), LocationListener {
             fieldTest = FieldTestPanel(this, { updateMap() }, { fieldDestinationChanged() })
             root.addView(fieldTest!!.view)
         }
-        root.addView(mapView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { ready ->
             map = ready
             ready.setMinPitchPreference(0.0); ready.setMaxPitchPreference(0.0)
+            ready.uiSettings.isRotateGesturesEnabled = false
+            ready.uiSettings.isTiltGesturesEnabled = false
+            ready.addOnMoveListener(object : MapLibreMap.OnMoveListener {
+                override fun onMoveBegin(detector: MoveGestureDetector) {
+                    navigationFollow = false
+                    fieldTest?.setFollow(false)
+                    simulation?.setFollow(false)
+                }
+                override fun onMove(detector: MoveGestureDetector) {}
+                override fun onMoveEnd(detector: MoveGestureDetector) {}
+            })
             if (fieldTest != null) {
                 ready.addOnMapLongClickListener { point ->
                     fieldTest?.setDestination(point)
                     true
                 }
-                ready.addOnMoveListener(object : MapLibreMap.OnMoveListener {
-                    override fun onMoveBegin(detector: MoveGestureDetector) {
-                        fieldTest?.setFollow(false)
-                    }
-                    override fun onMove(detector: MoveGestureDetector) {}
-                    override fun onMoveEnd(detector: MoveGestureDetector) {}
-                })
             }
             ready.cameraPosition = CameraPosition.Builder().target(LatLng(32.0811, -81.0911)).zoom(12.0).tilt(0.0).build()
             val styleUrl = if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
@@ -210,9 +227,91 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     private fun driverPoint(): LatLng? = location?.takeIf { System.currentTimeMillis() - it.time < 120000 }?.let { LatLng(it.latitude, it.longitude) }
     private fun centerMap() {
+        navigationFollow = true
         fieldTest?.setFollow(true)
+        simulation?.setFollow(true)
         val target = driverPoint() ?: point(ride?.optJSONArray("pickup_coords")) ?: LatLng(32.0811, -81.0911)
-        map?.animateCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(target, 14.0))
+        val m = map ?: return
+        if (driverPoint() != null) moveNavigationCamera(m, target)
+        else m.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.5))
+    }
+
+    private fun gpsSpeed(): Double? = location?.takeIf {
+        System.currentTimeMillis() - it.time < 120000 && it.hasSpeed()
+    }?.speed?.toDouble()?.coerceAtLeast(0.0)
+
+    private fun navigationBearing(driver: LatLng): Double? {
+        val sim = simulation
+        if (sim != null) {
+            val leg = sim.engine.leg
+            val next = leg.pointAt((sim.engine.distanceMeters + 40.0).coerceAtMost(leg.lengthMeters))
+            val heading = NavigationCameraMath.bearingDegrees(
+                SimulationPoint(driver.latitude, driver.longitude), next)
+            if (heading != null) rememberedHeading = heading
+        } else {
+            val fix = location
+            if (fix != null && fix.hasBearing() && fix.hasSpeed() && fix.speed >= 2f &&
+                System.currentTimeMillis() - fix.time < 15000) {
+                rememberedHeading = fix.bearing.toDouble()
+            }
+        }
+        return rememberedHeading
+    }
+
+    private fun moveNavigationCamera(m: MapLibreMap, driver: LatLng) {
+        if (!navigationFollow || simulation?.follow == false || fieldTest?.follow == false) return
+        val speed = gpsSpeed() ?: 0.0
+        val bearing = navigationBearing(driver)
+        val ahead = NavigationCameraMath.lookAhead(
+            SimulationPoint(driver.latitude, driver.longitude), bearing, speed)
+        val camera = CameraPosition.Builder()
+            .target(LatLng(ahead.lat, ahead.lon))
+            .zoom(NavigationCameraMath.zoomForSpeed(speed))
+            .bearing(bearing ?: 0.0)
+            .tilt(0.0).build()
+        m.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 450)
+    }
+
+    private fun paintRoute(m: MapLibreMap) {
+        if (routePoints.size < 2) return
+        // Road-outline contrast is essential against both dark vector styles.
+        m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(20, 29, 46)).width(15f))
+        m.addPolyline(PolylineOptions().addAll(routePoints).color(
+            if (prefs.aeroEnabled) Color.rgb(63, 132, 245) else Color.rgb(112, 181, 255)
+        ).width(9f))
+    }
+
+    private fun displayStage(stage: String): String = when (stage) {
+        "accepted", "to_pickup" -> "Head to pickup"
+        "at_pickup" -> "At pickup"
+        "to_dropoff" -> "Head to destination"
+        "at_dropoff" -> "Destination reached"
+        "completed" -> "Trip complete"
+        else -> "Driver map"
+    }
+
+    private fun renderNavigation(stage: String) {
+        val sim = simulation
+        val field = fieldTest
+        val metres = if (sim != null) {
+            if (sim.engine.stage == SimulationStage.COMPLETE) null
+            else (sim.engine.leg.lengthMeters - sim.engine.distanceMeters).coerceAtLeast(0.0)
+        } else routeDistanceM
+        val seconds = if (sim != null) metres?.div(13.4112) else routeDurationS
+        hud.render(
+            when {
+                field != null && field.destination != null -> "Test destination"
+                field != null -> "Choose test destination"
+                sim != null -> displayStage(sim.engine.stage.rideStatus)
+                else -> displayStage(stage)
+            },
+            when {
+                field != null -> "FIELD TEST · No turn guidance"
+                sim != null -> "SIMULATED DRIVE · No live rides"
+                else -> "ROUTE PREVIEW · No turn guidance"
+            },
+            metres, seconds, gpsSpeed()
+        )
     }
     private fun updateMap() {
         val m = map ?: return
@@ -227,7 +326,10 @@ class DriverMapActivity : Activity(), LocationListener {
         val pickup = point(current?.optJSONArray("pickup_coords")); val dropoff = point(current?.optJSONArray("dropoff_coords"))
         val id = current?.optString("id") ?: ""; val stage = current?.optString("status") ?: ""
         val key = "$id|$stage"
-        if (key != routeKey) { routeKey = key; routeGeneration++; routePoints = emptyList(); lastRoute = 0 }
+        if (key != routeKey) {
+            routeKey = key; routeGeneration++; routePoints = emptyList(); lastRoute = 0
+            routeDistanceM = null; routeDurationS = null
+        }
         if (sim != null) {
             routePoints = if (sim.engine.stage == SimulationStage.COMPLETE) emptyList()
                 else sim.engine.leg.points.map { LatLng(it.lat, it.lon) }
@@ -236,15 +338,14 @@ class DriverMapActivity : Activity(), LocationListener {
         driver?.let { m.addMarker(MarkerOptions().position(it).title(if (sim != null) "Simulated driver" else "You")) }
         pickup?.let { m.addMarker(MarkerOptions().position(it).title("Pickup")) }
         dropoff?.let { m.addMarker(MarkerOptions().position(it).title("Destination")) }
-        if (routePoints.size >= 2) m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(46,230,160)).width(5f))
+        paintRoute(m)
+        renderNavigation(stage)
+        if (driver != null) moveNavigationCamera(m, driver)
         if (id != fittedRide && id.isNotEmpty()) { fittedRide = id; centerMap() }
         if (id.isEmpty()) fittedRide = ""
         if (sim != null) {
             status.text = "SIMULATION · ${sim.engine.stage.label}" +
                 if (sim.engine.gps == SimulationGps.LOST) " · GPS lost" else ""
-            if (sim.follow && driver != null) {
-                m.animateCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLng(driver), 400)
-            }
             return // Simulation never calls the ride API, GPS service or live route endpoint.
         }
         status.text = when {
@@ -261,9 +362,19 @@ class DriverMapActivity : Activity(), LocationListener {
                     val conn = URL(url).openConnection() as HttpURLConnection
                     conn.connectTimeout = 10000; conn.readTimeout = 15000
                     val response = try { if (conn.responseCode != 200) throw Exception("Route unavailable"); conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
-                    val coords = JSONObject(response).getJSONArray("routes").getJSONObject(0).getJSONObject("geometry").getJSONArray("coordinates")
-                    val points = (0 until coords.length()).map { coords.getJSONArray(it) }.map { LatLng(it.getDouble(1), it.getDouble(0)) }
-                    runOnUiThread { if (active && generation == routeGeneration) { routePoints = points; updateMap() } }
+                    val route = JSONObject(response).getJSONArray("routes").getJSONObject(0)
+                    val coords = route.getJSONObject("geometry").getJSONArray("coordinates")
+                    if (coords.length() !in 2..30000) throw Exception("Invalid route")
+                    val points = (0 until coords.length()).map { coords.getJSONArray(it) }
+                        .map { LatLng(it.getDouble(1), it.getDouble(0)) }
+                    runOnUiThread {
+                        if (active && generation == routeGeneration) {
+                            routePoints = points
+                            routeDistanceM = route.optDouble("distance").takeIf { it.isFinite() && it >= 0 }
+                            routeDurationS = route.optDouble("duration").takeIf { it.isFinite() && it >= 0 }
+                            updateMap()
+                        }
+                    }
                 } catch (_: Exception) { runOnUiThread { if (active && generation == routeGeneration) status.text = "Route unavailable · Ride pins remain on the map." } }
             }
         }
@@ -275,20 +386,16 @@ class DriverMapActivity : Activity(), LocationListener {
         m.clear()
         driver?.let { m.addMarker(MarkerOptions().position(it).title("Live GPS · field test")) }
         panel.destination?.let { m.addMarker(MarkerOptions().position(it).title("Test destination")) }
-        if (routePoints.size >= 2) {
-            m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(46, 230, 160)).width(5f))
-        }
+        paintRoute(m)
         val trail = panel.trail()
         if (trail.size >= 2) {
             m.addPolyline(PolylineOptions().addAll(trail).color(Color.rgb(255, 171, 58)).width(4f))
         }
         if (panel.follow && driver != null) {
-            val camera = org.maplibre.android.camera.CameraUpdateFactory
-            if (!fieldCameraReady) {
-                m.animateCamera(camera.newLatLngZoom(driver, 15.0))
-                fieldCameraReady = true
-            } else m.animateCamera(camera.newLatLng(driver), 400)
+            moveNavigationCamera(m, driver)
+            fieldCameraReady = true
         }
+        renderNavigation("")
         val fix = location
         val separation = if (driver != null && routePoints.size >= 2) {
             FieldRouteMath.distanceMeters(SimulationPoint(driver.latitude, driver.longitude),
@@ -305,6 +412,8 @@ class DriverMapActivity : Activity(), LocationListener {
     private fun fieldDestinationChanged() {
         routeGeneration++
         routePoints = emptyList()
+        routeDistanceM = null
+        routeDurationS = null
         val destination = fieldTest?.destination
         if (destination == null) {
             fieldRouteStatus = "Long-press map to set a test destination."
@@ -333,14 +442,16 @@ class DriverMapActivity : Activity(), LocationListener {
                     if (conn.responseCode != 200) throw Exception("Route unavailable")
                     conn.inputStream.bufferedReader().use { it.readText() }
                 } finally { conn.disconnect() }
-                val coords = JSONObject(response).getJSONArray("routes")
-                    .getJSONObject(0).getJSONObject("geometry").getJSONArray("coordinates")
+                val route = JSONObject(response).getJSONArray("routes").getJSONObject(0)
+                val coords = route.getJSONObject("geometry").getJSONArray("coordinates")
                 if (coords.length() !in 2..30000) throw Exception("Invalid route")
                 val points = (0 until coords.length()).map { coords.getJSONArray(it) }
                     .map { LatLng(it.getDouble(1), it.getDouble(0)) }
                 runOnUiThread {
                     if (active && generation == routeGeneration && fieldTest != null) {
                         routePoints = points
+                        routeDistanceM = route.optDouble("distance").takeIf { it.isFinite() && it >= 0 }
+                        routeDurationS = route.optDouble("duration").takeIf { it.isFinite() && it >= 0 }
                         fieldRouteStatus = "Planned route (no traffic) · Orange = recorded trail."
                         updateMap()
                     }
