@@ -42,6 +42,7 @@ class DriverMapActivity : Activity(), LocationListener {
     private lateinit var mapView: MapView
     private lateinit var status: TextView
     private lateinit var hud: NavigationHud
+    private val driverMarker by lazy { NavigationMarker.create(this, prefs.aeroEnabled) }
     private var navigationFollow = true
     private var rememberedHeading: Double? = null
     private var routeDistanceM: Double? = null
@@ -335,7 +336,7 @@ class DriverMapActivity : Activity(), LocationListener {
                 else sim.engine.leg.points.map { LatLng(it.lat, it.lon) }
         }
         m.clear()
-        driver?.let { m.addMarker(MarkerOptions().position(it).title(if (sim != null) "Simulated driver" else "You")) }
+        driver?.let { m.addMarker(MarkerOptions().position(it).icon(driverMarker).title(if (sim != null) "Simulated driver" else "You")) }
         pickup?.let { m.addMarker(MarkerOptions().position(it).title("Pickup")) }
         dropoff?.let { m.addMarker(MarkerOptions().position(it).title("Destination")) }
         paintRoute(m)
@@ -384,7 +385,7 @@ class DriverMapActivity : Activity(), LocationListener {
         val panel = fieldTest ?: return
         val driver = driverPoint()
         m.clear()
-        driver?.let { m.addMarker(MarkerOptions().position(it).title("Live GPS · field test")) }
+        driver?.let { m.addMarker(MarkerOptions().position(it).icon(driverMarker).title("Live GPS · field test")) }
         panel.destination?.let { m.addMarker(MarkerOptions().position(it).title("Test destination")) }
         paintRoute(m)
         val trail = panel.trail()
