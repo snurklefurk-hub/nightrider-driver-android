@@ -193,7 +193,10 @@ class AeroThemeTests(unittest.TestCase):
         self.assertNotIn('"Aero UI"', preview)
         self.assertNotIn('"Classic UI"', preview)
         self.assertIn('Typeface.create("sans-serif-rounded"', preview)
-        self.assertIn('android:fontFamily', styles)
+        with open(p("app", "src", "main", "res", "values", "themes.xml"),
+                  encoding="utf-8") as fh:
+            themes = fh.read()
+        self.assertIn('<item name="android:fontFamily">sans-serif-rounded</item>', themes)
         with open(p("app", "src", "main", "AndroidManifest.xml"),
                   encoding="utf-8") as fh:
             manifest = fh.read()
