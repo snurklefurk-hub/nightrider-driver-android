@@ -35,6 +35,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".DriverMapActivity" android:exported="false" android:label="Driver map" />
+
         <!-- Reached from the small Settings button in the driver bar. -->
         <activity
             android:name=".SettingsActivity"
@@ -48,4 +50,5 @@
     </application>
 
 </manifest>
+
 
