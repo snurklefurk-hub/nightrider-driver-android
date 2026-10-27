@@ -59,8 +59,8 @@ restore GPS, try off-route, and repeat in LIGHT and DARK (selected in Settings).
 When the simulator opens again, the current Settings appearance is applied.
 
 This is a map playback environment. The driver app does not yet implement
-turn-by-turn guidance, rerouting or SmartZoom, so these controls do not claim
-to test those future features. The deterministic playback engine has local
+turn-by-turn guidance or rerouting; the new speed-sensitive, flat SmartZoom
+camera is a visual preview, not a turn-aware navigation system. The deterministic playback engine has local
 unit tests; Android CI runs them before assembling the APK.
 
 The bundled synthetic journeys were generated from public sample coordinates
@@ -83,7 +83,7 @@ tap the on-map **◎ Recenter** button to resume. The simulator's Follow option
 continues to work independently. In Field Test, the same camera uses real GPS
 while leaving recorded traces untouched.
 
-Important boundaries: this is a **visual navigation preview**, not a finished
+Important boundaries: **No turn guidance.** This is a **visual navigation preview**, not a finished
 navigation system. It does not claim a next turn, issue spoken guidance, or
 reroute automatically. When OSRM returns a route, displayed distance and
 duration are estimates without traffic, based on the time of the last request,
