@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -41,6 +42,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
+    private var aeroActive = false
+
+    private fun themedColor(attr: Int): Int {
+        val value = TypedValue()
+        theme.resolveAttribute(attr, value, true)
+        return if (value.resourceId != 0) getColor(value.resourceId) else value.data
+    }
     private lateinit var loginScroll: ScrollView
     private lateinit var nameInput: EditText
     private lateinit var passInput: EditText
@@ -129,23 +137,33 @@ class MainActivity : Activity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        prefs = Prefs(this)
+        aeroActive = prefs.aeroEnabled
+        if (aeroActive) setTheme(R.style.Theme_NightRider_Aero)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        prefs = Prefs(this)
         Api.sessionToken = prefs.sessionToken
 
         loginScroll = findViewById(R.id.loginScroll)
-        val loginGrid = NightGridDrawable()
-        loginScroll.background = loginGrid
-        loginScroll.setOnScrollChangeListener { _, _, y, _, _ -> loginGrid.setParallaxOffset(y) }
+        if (aeroActive) {
+            loginScroll.setBackgroundResource(R.drawable.bg_aero_sky)
+        } else {
+            val loginGrid = NightGridDrawable()
+            loginScroll.background = loginGrid
+            loginScroll.setOnScrollChangeListener { _, _, y, _, _ -> loginGrid.setParallaxOffset(y) }
+        }
         nameInput = findViewById(R.id.nameInput)
         passInput = findViewById(R.id.passInput)
         loginButton = findViewById(R.id.loginButton)
         loginError = findViewById(R.id.loginError)
         boardPanel = findViewById(R.id.boardPanel)
-        val boardGrid = NightGridDrawable()
-        boardPanel.background = boardGrid
-        findViewById<ScrollView>(R.id.boardScroll).setOnScrollChangeListener { _, _, y, _, _ -> boardGrid.setParallaxOffset(y) }
+        if (aeroActive) {
+            boardPanel.setBackgroundResource(R.drawable.bg_aero_sky)
+        } else {
+            val boardGrid = NightGridDrawable()
+            boardPanel.background = boardGrid
+            findViewById<ScrollView>(R.id.boardScroll).setOnScrollChangeListener { _, _, y, _, _ -> boardGrid.setParallaxOffset(y) }
+        }
         driverLine = findViewById(R.id.driverLine)
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
@@ -184,6 +202,10 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (prefs.aeroEnabled != aeroActive) {
+            recreate() // Returning from Settings immediately applies the selected appearance.
+            return
+        }
         applyKeepAwake()
         val name = prefs.driverName
         if (!prefs.loggedIn) {
@@ -433,8 +455,8 @@ class MainActivity : Activity() {
                 visibility = if (completedRidesExpanded) View.VISIBLE else View.GONE
             }
             val toggle = Button(this).apply {
-                setBackgroundResource(R.drawable.btn_outline_plum)
-                setTextColor(getColor(R.color.plum))
+                setBackgroundResource(if (aeroActive) R.drawable.btn_aero_green else R.drawable.btn_outline_plum)
+                setTextColor(themedColor(R.attr.nrSecondaryButtonText))
                 minHeight = dp(48)
                 textSize = 13f
                 text = getString(R.string.completed_rides_toggle, completed.size,
@@ -484,7 +506,7 @@ class MainActivity : Activity() {
     private fun rideCard(ride: JSONObject, isMine: Boolean): View {
         val card = LinearLayout(this)
         card.orientation = LinearLayout.VERTICAL
-        card.setBackgroundResource(R.drawable.panel)
+        card.setBackgroundResource(if (aeroActive) R.drawable.panel_aero else R.drawable.panel)
         val pad = dp(14)
         card.setPadding(pad, pad, pad, pad)
         val lp = LinearLayout.LayoutParams(
@@ -498,12 +520,12 @@ class MainActivity : Activity() {
         head.orientation = LinearLayout.HORIZONTAL
         val idView = TextView(this)
         idView.text = ride.optString("id")
-        idView.setTextColor(getColor(R.color.mist))
+        idView.setTextColor(themedColor(R.attr.nrMuted))
         idView.textSize = 11f
         head.addView(idView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val statusView = TextView(this)
         statusView.text = statusLabels[ride.optString("status")] ?: ride.optString("status")
-        statusView.setTextColor(getColor(R.color.cyan))
+        statusView.setTextColor(themedColor(R.attr.nrAccent))
         statusView.textSize = 11f
         head.addView(statusView)
         card.addView(head)
@@ -522,7 +544,7 @@ class MainActivity : Activity() {
         if (bits.isNotEmpty()) {
             val meta = TextView(this)
             meta.text = bits.joinToString("  \u00b7  ")
-            meta.setTextColor(getColor(R.color.mist))
+            meta.setTextColor(themedColor(R.attr.nrMuted))
             meta.textSize = 12f
             meta.setPadding(0, dp(6), 0, 0)
             card.addView(meta)
@@ -559,12 +581,12 @@ class MainActivity : Activity() {
         box.setPadding(0, dp(8), 0, 0)
         val label = TextView(this)
         label.text = getString(labelRes)
-        label.setTextColor(getColor(R.color.mist))
+        label.setTextColor(themedColor(R.attr.nrMuted))
         label.textSize = 10f
         box.addView(label)
         val text = TextView(this)
         text.text = value
-        text.setTextColor(getColor(R.color.ice))
+        text.setTextColor(themedColor(R.attr.nrText))
         text.textSize = 15f
         box.addView(text)
         return box
@@ -574,9 +596,9 @@ class MainActivity : Activity() {
         val button = Button(this)
         button.text = label
         button.isAllCaps = false
-        button.setTextColor(getColor(R.color.cyan))
+        button.setTextColor(themedColor(R.attr.nrPrimaryButtonText))
         button.textSize = 12f
-        button.setBackgroundResource(R.drawable.btn_outline)
+        button.setBackgroundResource(if (aeroActive) R.drawable.btn_aero_blue else R.drawable.btn_outline)
         button.minimumHeight = 0
         button.setPadding(dp(14), dp(8), dp(14), dp(8))
         val lp = LinearLayout.LayoutParams(
@@ -592,7 +614,7 @@ class MainActivity : Activity() {
     private fun emptyText(resId: Int): View {
         val text = TextView(this)
         text.text = getString(resId)
-        text.setTextColor(getColor(R.color.mist))
+        text.setTextColor(themedColor(R.attr.nrMuted))
         text.textSize = 13f
         text.setPadding(0, dp(4), 0, dp(12))
         return text
@@ -803,28 +825,34 @@ class MainActivity : Activity() {
         }
         val bubble = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundResource(if (priv) R.drawable.bubble_private else if (mine) R.drawable.bubble_me else R.drawable.bubble_them)
+            setBackgroundResource(
+                if (aeroActive) {
+                    if (priv) R.drawable.bubble_aero_private else if (mine) R.drawable.bubble_aero_me else R.drawable.bubble_aero_them
+                } else {
+                    if (priv) R.drawable.bubble_private else if (mine) R.drawable.bubble_me else R.drawable.bubble_them
+                }
+            )
             val pad = dp(10); setPadding(pad, dp(7), pad, dp(7))
         }
         val color = try { android.graphics.Color.parseColor(message.optString("chat_color", "#ffffff")) }
-            catch (_: Exception) { getColor(R.color.ice) }
+            catch (_: Exception) { themedColor(R.attr.nrText) }
         val who = TextView(this).apply {
             text = (if (mine) "You" else from) +
                 (if (message.has("ride_id")) " · Ride " + message.optString("ride_id") else "") +
                 (if (priv) " · private" else "")
-            setTextColor(color); textSize = 10f
+            setTextColor(if (aeroActive && color == android.graphics.Color.WHITE) themedColor(R.attr.nrAccent) else color); textSize = 10f
         }
         bubble.addView(who)
         val body = TextView(this).apply {
             text = message.optString("text")
-            setTextColor(getColor(R.color.ice)); textSize = 13f
+            setTextColor(themedColor(R.attr.nrText)); textSize = 13f
             maxWidth = (resources.displayMetrics.widthPixels * 0.74).toInt() - dp(20)
         }
         bubble.addView(body)
         val at = message.optDouble("at", 0.0)
         val time = TextView(this).apply {
             text = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date((at * 1000).toLong()))
-            setTextColor(getColor(R.color.mist)); textSize = 9f
+            setTextColor(themedColor(R.attr.nrMuted)); textSize = 9f
         }
         bubble.addView(time); row.addView(bubble)
         if (priv) {
@@ -835,8 +863,8 @@ class MainActivity : Activity() {
         }
         if (!mine) {
             val reply = Button(this).apply {
-                setBackgroundResource(R.drawable.btn_outline_plum)
-                setTextColor(getColor(R.color.plum))
+                setBackgroundResource(if (aeroActive) R.drawable.btn_aero_green else R.drawable.btn_outline_plum)
+                setTextColor(themedColor(R.attr.nrSecondaryButtonText))
                 minHeight = dp(40)
                 textSize = 12f
                 text = "Reply"; isAllCaps = false
