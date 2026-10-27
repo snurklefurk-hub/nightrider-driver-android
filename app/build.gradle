@@ -56,7 +56,6 @@ android {
     }
 }
 
-// No external dependencies: the app is built only against the Android
-// framework, so a build never has to download anything from Maven.
 dependencies {
+    implementation 'org.maplibre.gl:android-sdk:13.6.1'
 }
