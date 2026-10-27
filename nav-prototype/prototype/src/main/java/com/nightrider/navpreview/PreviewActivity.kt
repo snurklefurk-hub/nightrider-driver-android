@@ -117,7 +117,7 @@ class PreviewActivity : Activity() {
         }
         controls.addView(status)
         controls.addView(TextView(this).apply {
-            text = "Light: NightRider Midnight. Dark: OpenFreeMap Original Dark. Pan / pinch to inspect roads. Camera is flat; no GPS or ride data."
+            text = "Pan / pinch to zoom · 2D only · no live rides or GPS."
             textSize = 10f
             setTextColor(silver)
             setPadding(0, dp(5), 0, 0)
@@ -156,7 +156,7 @@ class PreviewActivity : Activity() {
             b.background = pill(i == index)
             b.setTextColor(if (i == index) canvasColor else green)
         }
-        val label = if (index == 0) "Light · NightRider Midnight" else "Dark · OpenFreeMap Original"
+        val label = if (index == 0) "Light" else "Dark"
         status.text = "Loading $label…"
         // Runtime overrides are applied only to the freshly loaded Midnight style.
         readyMap.setStyle(url) { loadedStyle ->
