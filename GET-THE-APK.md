@@ -29,8 +29,15 @@ The workflow builds automatically on pull requests and when Android source
 changes land on the default branch. Debug builds do not use the permanent
 release signing key and cannot update an installed signed release.
 
-The debug artifact can be installed for a separate test, but it cannot replace
-the signed release in place. Neither APK is a Play Store release. The signed
-release is the pilot update channel described in
+The debug build uses the **same application ID** as the signed Driver app
+but a **different signing certificate**: they cannot be installed side by side
+on the same Android user profile, nor can one update the other. Use a spare
+test device/profile, or uninstall the existing app before switching channels
+(which clears that installation's local sign-in/preferences). The standalone
+**NightRider Map Preview** has a different application ID and can coexist with
+the signed Driver app.
+
+Neither Driver APK is a Play Store release. The signed release is the pilot
+update channel described in
 [IN-APP-UPDATES.md](IN-APP-UPDATES.md).
 

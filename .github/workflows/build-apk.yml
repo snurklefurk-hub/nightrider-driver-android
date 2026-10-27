@@ -5,8 +5,8 @@
 # About 3-5 minutes later the debug APK is downloadable from the run's
 # "Artifacts" box. Signed pilot updates have a separate release workflow.
 #
-# This file works whether the Android project sits at the top of the repo or in
-# a sub-folder (for example "android/") - it finds settings.gradle itself.
+# The production Android project is at the repository root. Do not discover
+# a random nested settings.gradle: nav-prototype is a different Android app.
 #
 # If the build fails, the run page's summary shows the real error lines from the
 # Gradle log - Kotlin errors start with "e:" - plus Gradle's own "What went
@@ -18,14 +18,21 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [ main, master ]
+    paths:
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - 'tests/test_package.py'
+      - '.github/workflows/build-apk.yml'
   push:
     branches: [ main, master ]
     paths:
-      - '**.gradle'
-      - '**.kt'
-      - '**.xml'
       - 'app/**'
-      - 'android/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - 'tests/test_package.py'
       - '.github/workflows/build-apk.yml'
 
 permissions:
@@ -40,14 +47,16 @@ jobs:
       - name: Get the project files
         uses: actions/checkout@v7
 
-      - name: Find the Android project
+      - name: Verify production Android project (not Map Lab)
         id: find
         run: |
-          DIR=$(find . -name settings.gradle -not -path './.git/*' | head -1)
-          DIR=$(dirname "$DIR")
-          echo "Found Android project in: $DIR"
-          test -f "$DIR/app/build.gradle" || { echo "app/build.gradle not found in $DIR"; exit 1; }
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          test -f settings.gradle
+          test -f app/build.gradle
+          echo "dir=." >> "$GITHUB_OUTPUT"
+
+      - name: Run Android source/package regression checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Install Java 17
         uses: actions/setup-java@v6
