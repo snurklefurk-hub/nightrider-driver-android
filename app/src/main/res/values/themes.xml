@@ -13,18 +13,53 @@
         <item name="android:windowLightStatusBar">false</item>
         <!-- The page is already dark; stop Android from darkening it twice. -->
         <item name="android:forceDarkAllowed">false</item>
+        <item name="nrAccent">@color/cyan</item>
+        <item name="nrSecondary">@color/plum</item>
+        <item name="nrText">@color/ice</item>
+        <item name="nrMuted">@color/mist</item>
+        <item name="nrDanger">@color/rose</item>
+        <item name="nrTopbar">@color/void_night</item>
+        <item name="nrPrimaryButtonText">@color/cyan</item>
+        <item name="nrSecondaryButtonText">@color/plum</item>
+        <item name="nrPanelBackground">@drawable/panel</item>
+        <item name="nrPrimaryButton">@drawable/btn_outline</item>
+        <item name="nrSecondaryButton">@drawable/btn_outline_plum</item>
+    </style>
+
+    <style name="Theme.NightRider.Aero" parent="Theme.NightRider">
+        <item name="android:colorPrimary">@color/aero_blue</item>
+        <item name="android:colorPrimaryDark">@color/aero_status</item>
+        <item name="android:colorAccent">@color/aero_blue</item>
+        <item name="android:textColorPrimary">@color/aero_ink</item>
+        <item name="android:textColorSecondary">@color/aero_muted</item>
+        <item name="android:windowBackground">@drawable/bg_aero_sky</item>
+        <item name="android:statusBarColor">@color/aero_status</item>
+        <item name="android:navigationBarColor">@color/aero_nav</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="nrAccent">@color/aero_blue</item>
+        <item name="nrSecondary">@color/aero_green</item>
+        <item name="nrText">@color/aero_ink</item>
+        <item name="nrMuted">@color/aero_muted</item>
+        <item name="nrDanger">@color/aero_danger</item>
+        <item name="nrTopbar">@color/aero_pale</item>
+        <item name="nrPrimaryButtonText">@color/aero_text_white</item>
+        <item name="nrSecondaryButtonText">@color/aero_text_white</item>
+        <item name="nrPanelBackground">@drawable/panel_aero</item>
+        <item name="nrPrimaryButton">@drawable/btn_aero_blue</item>
+        <item name="nrSecondaryButton">@drawable/btn_aero_green</item>
     </style>
 
     <style name="NrLabel">
-        <item name="android:textColor">@color/cyan</item>
+        <item name="android:textColor">?attr/nrAccent</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.14</item>
     </style>
 
     <style name="NrButton" parent="android:Widget.Material.Button">
-        <item name="android:background">@drawable/btn_outline</item>
-        <item name="android:textColor">@color/cyan</item>
+        <item name="android:background">?attr/nrPrimaryButton</item>
+        <item name="android:textColor">?attr/nrPrimaryButtonText</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.14</item>
         <item name="android:textSize">13sp</item>
@@ -35,8 +70,8 @@
     </style>
 
     <style name="NrButton.Alt">
-        <item name="android:background">@drawable/btn_outline_plum</item>
-        <item name="android:textColor">@color/plum</item>
+        <item name="android:background">?attr/nrSecondaryButton</item>
+        <item name="android:textColor">?attr/nrSecondaryButtonText</item>
     </style>
 
     <!-- Compact version of NrButton for the slim driver bar. -->
