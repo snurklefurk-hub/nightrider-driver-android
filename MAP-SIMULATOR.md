@@ -59,11 +59,41 @@ restore GPS, try off-route, and repeat in LIGHT and DARK (selected in Settings).
 When the simulator opens again, the current Settings appearance is applied.
 
 This is a map playback environment. The driver app does not yet implement
-turn-by-turn guidance, rerouting or SmartZoom, so these controls do not claim
-to test those future features. The deterministic playback engine has local
+turn-by-turn guidance or rerouting; the new speed-sensitive, flat SmartZoom
+camera is a visual preview, not a turn-aware navigation system. The deterministic playback engine has local
 unit tests; Android CI runs them before assembling the APK.
 
 The bundled synthetic journeys were generated from public sample coordinates
 using OSRM on OpenStreetMap data. They are repeatable test fixtures, not a record
 of a real driver. Route playback does not make OSRM requests. Source route data:
 https://router.project-osrm.org/ and https://www.openstreetmap.org/copyright
+
+## Classic navigation presentation preview
+
+The live driver map, simulator, and isolated Field Test now share a map-first
+presentation inspired by classic rideshare navigation. The map receives a large
+top destination banner, a compact lower trip estimate/speed panel, a blue
+vehicle-position arrow, and high-contrast blue route geometry. Appearance still
+follows the single Settings LIGHT/DARK choice; no additional map toggle.
+
+The **2D heading-up camera** follows movement while using speed-based zoom:
+closer at low speeds, wider on faster roads, always zero pitch. It leaves extra
+visible road ahead of the driver's position. Dragging the map disables follow;
+tap the on-map **◎ Recenter** button to resume. The simulator's Follow option
+continues to work independently. In Field Test, the same camera uses real GPS
+while leaving recorded traces untouched.
+
+Important boundaries: **No turn guidance.** This is a **visual navigation preview**, not a finished
+navigation system. It does not claim a next turn, issue spoken guidance, or
+reroute automatically. When OSRM returns a route, displayed distance and
+duration are estimates without traffic, based on the time of the last request,
+not a continuously updated arrival prediction. The simulator's countdown uses
+its fixed synthetic playback speed. Long-press Field Test destination selection,
+CSV export, and live rider/dispatch isolation remain unchanged. The view
+requires a real device test for camera smoothness and readability before release.
+
+Suggested parked/passenger-assisted test: open the simulator, cycle between
+Savannah, bridge, and Hilton Head, play at 1×/4×, inspect both themes, drag and
+recenter; test GPS lost/off-route to ensure controls remain usable. In Field Test,
+choose a safe destination while parked, drive with no interactions, confirm
+the highlighted route and camera scale, stop safely, and save a trace.
