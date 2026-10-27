@@ -51,6 +51,9 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="appearance_section">Appearance</string>
+    <string name="aero_theme_setting">Frutiger Aero</string>
+    <string name="aero_theme_help">Sky-blue glass and glossy green/blue controls. Turn off to use Classic NightRider.</string>
     <string name="driver_label">Driver</string>
     <string name="server_label">Server</string>
     <string name="server_note">This address is fixed in the app and cannot be changed.</string>
