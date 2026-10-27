@@ -53,6 +53,7 @@ class DriverMapActivity : Activity(), LocationListener {
     private var routeGeneration = 0
     private var routePoints: List<LatLng> = emptyList()
     private var fittedRide = ""
+    private var simulation: MapSimulationPanel? = null
     private val tick = object : Runnable {
         override fun run() { if (active) { refreshRide(); main.postDelayed(this, 6000) } }
     }
@@ -69,6 +70,10 @@ class DriverMapActivity : Activity(), LocationListener {
         status = TextView(this).apply { setTextColor(if (prefs.aeroEnabled) Color.rgb(18,61,87) else Color.WHITE); setPadding(20,10,20,10); text = "Loading map…" }
         mapView = MapView(this)
         root.addView(controls); root.addView(status)
+        if (intent.getBooleanExtra("simulation", false)) {
+            simulation = MapSimulationPanel(this, savedInstanceState) { updateMap() }
+            root.addView(simulation!!.view)
+        }
         root.addView(mapView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
         mapView.onCreate(savedInstanceState)
@@ -87,20 +92,24 @@ class DriverMapActivity : Activity(), LocationListener {
     override fun onStart() { super.onStart(); mapView.onStart() }
     override fun onResume() {
         super.onResume(); mapView.onResume()
-        if (!prefs.loggedIn) { finish(); return }
-        active = true; startLocation(); main.post(tick)
+        if (simulation == null && !prefs.loggedIn) { finish(); return }
+        active = true
+        if (simulation != null) simulation!!.resume()
+        else { startLocation(); main.post(tick) }
     }
     override fun onPause() {
         active = false; main.removeCallbacks(tick)
-        (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
+        simulation?.pause()
+        if (simulation == null) (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
         mapView.onPause(); super.onPause()
     }
     override fun onStop() { mapView.onStop(); super.onStop() }
     override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
-    override fun onDestroy() { main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
-    override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); mapView.onSaveInstanceState(state) }
+    override fun onDestroy() { simulation?.destroy(); main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
+    override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); simulation?.save(state); mapView.onSaveInstanceState(state) }
 
     private fun startLocation() {
+        if (simulation != null) return
         val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (!fine && !coarse) { status.text = "Allow location on the driver board to show your position."; return }
@@ -121,6 +130,7 @@ class DriverMapActivity : Activity(), LocationListener {
     @Deprecated("Legacy Android callback") override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
 
     private fun refreshRide() {
+        if (simulation != null) return
         if (!busy.compareAndSet(false, true)) return
         io.execute {
             try {
@@ -148,18 +158,35 @@ class DriverMapActivity : Activity(), LocationListener {
     private fun updateMap() {
         val m = map ?: return
         if (m.style == null) return
+        val sim = simulation
+        if (sim != null) {
+            ride = sim.sampleRide()
+            location = sim.sampleLocation()
+        }
         val current = ride; val driver = driverPoint()
         val pickup = point(current?.optJSONArray("pickup_coords")); val dropoff = point(current?.optJSONArray("dropoff_coords"))
         val id = current?.optString("id") ?: ""; val stage = current?.optString("status") ?: ""
         val key = "$id|$stage"
         if (key != routeKey) { routeKey = key; routeGeneration++; routePoints = emptyList(); lastRoute = 0 }
+        if (sim != null) {
+            routePoints = if (sim.engine.stage == SimulationStage.COMPLETE) emptyList()
+                else sim.engine.leg.points.map { LatLng(it.lat, it.lon) }
+        }
         m.clear()
-        driver?.let { m.addMarker(MarkerOptions().position(it).title("You")) }
+        driver?.let { m.addMarker(MarkerOptions().position(it).title(if (sim != null) "Simulated driver" else "You")) }
         pickup?.let { m.addMarker(MarkerOptions().position(it).title("Pickup")) }
         dropoff?.let { m.addMarker(MarkerOptions().position(it).title("Destination")) }
         if (routePoints.size >= 2) m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(46,230,160)).width(5f))
         if (id != fittedRide && id.isNotEmpty()) { fittedRide = id; centerMap() }
         if (id.isEmpty()) fittedRide = ""
+        if (sim != null) {
+            status.text = "SIMULATION · ${sim.engine.stage.label}" +
+                if (sim.engine.gps == SimulationGps.LOST) " · GPS lost" else ""
+            if (sim.follow && driver != null) {
+                m.animateCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLng(driver), 400)
+            }
+            return // Simulation never calls the ride API, GPS service or live route endpoint.
+        }
         status.text = when {
             current == null -> "No active ride · Tap Recenter to find yourself."
             driver == null -> "Active ride · Waiting for a fresh location."
@@ -237,4 +264,3 @@ class DriverMapActivity : Activity(), LocationListener {
     }
 
 }
-
