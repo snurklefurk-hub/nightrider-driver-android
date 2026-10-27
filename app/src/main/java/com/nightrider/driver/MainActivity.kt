@@ -160,6 +160,9 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<Button>(R.id.driverMapButton).setOnClickListener {
+            startActivity(Intent(this, DriverMapActivity::class.java))
+        }
         loginButton.setOnClickListener { attemptLogin() }
         passInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -939,5 +942,6 @@ class MainActivity : Activity() {
         else -> e.message ?: e.javaClass.simpleName
     }
 }
+
 
 
