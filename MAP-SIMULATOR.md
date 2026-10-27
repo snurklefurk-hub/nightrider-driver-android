@@ -25,7 +25,7 @@ access. You do **not** need to be signed into a driver account.
 
 Privacy and scope: location fixes and trails stay in memory, are never
 persisted across screen closure, and are never sent to NightRider, a dispatch
-board, a ride, or another driver. Sharing via CSV is opt-in. A route request
+board, a ride, or another driver. Saving or sharing via CSV is opt-in. A route request
 does send the **current GPS and chosen destination coordinates** to public OSRM;
 the map itself loads OpenFreeMap. The screen requests location only while it is
 visible, and automatically stops recording on leaving. There is no background
