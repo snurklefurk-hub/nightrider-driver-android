@@ -153,5 +153,39 @@ class MapPreviewIsolationTests(unittest.TestCase):
 
 
 
+
+class AeroThemeTests(unittest.TestCase):
+    def test_aero_theme_is_optional_and_uses_separate_resources(self):
+        with open(p("app", "src", "main", "res", "values", "themes.xml"),
+                  encoding="utf-8") as fh:
+            styles = fh.read()
+        tree = ET.fromstring(styles)
+        names = {style.get("name") for style in tree.findall("style")}
+        self.assertIn("Theme.NightRider", names)
+        self.assertIn("Theme.NightRider.Aero", names)
+        self.assertIn('<item name="nrPrimaryButton">@drawable/btn_aero_blue</item>', styles)
+        self.assertIn('<item name="nrPanelBackground">@drawable/panel_aero</item>', styles)
+        for name in ("attrs.xml", "aero_colors.xml"):
+            ET.parse(p("app", "src", "main", "res", "values", name))
+        for name in ("bg_aero_sky", "panel_aero", "btn_aero_blue",
+                     "btn_aero_green", "bubble_aero_me", "bubble_aero_them",
+                     "bubble_aero_private"):
+            ET.parse(p("app", "src", "main", "res", "drawable", name + ".xml"))
+
+    def test_aero_setting_is_separate_from_session_and_map_modes(self):
+        with open(p("app", "src", "main", "java", "com", "nightrider",
+                    "driver", "Prefs.kt"), encoding="utf-8") as fh:
+            prefs = fh.read()
+        self.assertIn('private const val KEY_AERO = "frutiger_aero_ui"', prefs)
+        self.assertIn("var aeroEnabled: Boolean", prefs)
+        with open(p("app", "src", "main", "res", "layout",
+                    "activity_settings.xml"), encoding="utf-8") as fh:
+            layout = fh.read()
+        self.assertIn('android:id="@+id/aeroTheme"', layout)
+        with open(p("app", "src", "main", "AndroidManifest.xml"),
+                  encoding="utf-8") as fh:
+            manifest = fh.read()
+        self.assertIn('android:theme="@style/Theme.NightRider"', manifest)
+
 if __name__ == "__main__":
     unittest.main()
