@@ -37,6 +37,11 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean(KEY_AWAKE, true)
         set(value) = sp.edit().putBoolean(KEY_AWAKE, value).apply()
 
+    /** Device-local, opt-in appearance. Classic is preserved by default. */
+    var aeroEnabled: Boolean
+        get() = sp.getBoolean(KEY_AERO, false)
+        set(value) = sp.edit().putBoolean(KEY_AERO, value).apply()
+
     val loggedIn: Boolean
         get() = driverName.isNotBlank() && sessionToken.isNotBlank()
 
@@ -103,6 +108,7 @@ class Prefs(ctx: Context) {
         private const val KEY_LAST = "last_username"
         private const val KEY_TOKEN = "session_token_encrypted"
         private const val KEY_AWAKE = "keep_awake"
+        private const val KEY_AERO = "frutiger_aero_ui"
     }
 }
 
