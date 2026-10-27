@@ -246,8 +246,8 @@ class DriverMapActivity : Activity(), LocationListener {
         if (sim != null) {
             val leg = sim.engine.leg
             val next = leg.pointAt((sim.engine.distanceMeters + 40.0).coerceAtMost(leg.lengthMeters))
-            val heading = NavigationCameraMath.bearingDegrees(
-                SimulationPoint(driver.latitude, driver.longitude), next)
+            val current = leg.pointAt(sim.engine.distanceMeters)
+            val heading = NavigationCameraMath.bearingDegrees(current, next)
             if (heading != null) rememberedHeading = heading
         } else {
             val fix = location
@@ -260,7 +260,8 @@ class DriverMapActivity : Activity(), LocationListener {
     }
 
     private fun moveNavigationCamera(m: MapLibreMap, driver: LatLng) {
-        if (!navigationFollow || simulation?.follow == false || fieldTest?.follow == false) return
+        if ((simulation == null && fieldTest == null && !navigationFollow) ||
+            simulation?.follow == false || fieldTest?.follow == false) return
         val speed = gpsSpeed() ?: 0.0
         val bearing = navigationBearing(driver)
         val ahead = NavigationCameraMath.lookAhead(
