@@ -17,46 +17,46 @@ the `NightRider-Map-Preview` artifact, or open the `nav-prototype` folder as
 its own project in Android Studio and run `:prototype:assembleDebug`.
 Install its APK on Android 8+ as a second, separate app.
 
-## What to compare
+## Two ecosystem map modes
 
-The demo centers on publicly chosen **Dallas, Texas** test locations (city
-streets and an interchange), not your actual location. Switch among:
-1. **NightRider Midnight** — DEFAULT experimental midtone. Fiord vector
-   layers with darker navy land, subdued water, brighter class-differentiated
-   roads, and readable labels. It preserves the Fiord tile sources, underlying
-   geometry and attribution. Runtime paint overrides are not a final hosted
-   production style.
-2. **OpenFreeMap Fiord** — original blue-toned lighter candidate, no key.
-3. **OpenFreeMap Dark** — original darker candidate, no key.
-4. **MapTiler Streets Dark v4** — optional hosted comparison; enter your own
-   MapTiler key at runtime. Nothing is written to local preferences or Git.
-   The older Streets Night v2 style is deprecated; v4 Dark is used instead.
+The standalone preview uses the same two **vector basemap modes** as the
+NightRider Rider website, Dispatch map and desktop web map lab:
 
-Camera pitch and tilt gestures are locked to zero; pan and zoom remain usable.
-Change styles without moving the map to compare identical roads/zoom levels.
-The preset buttons restore fixed test views. Default MapLibre attribution
-controls must remain visible and map providers' licensing must be followed.
+1. **Light · NightRider Midnight** — Fiord vector geometry recolored with the
+   NightRider navy-charcoal land, brighter road hierarchy and readable labels.
+2. **Dark · OpenFreeMap Original Dark** — upstream vector style without paint
+   overrides.
+
+The selected map mode persists locally in Android `SharedPreferences`; on the
+first launch it follows the Android system light/dark appearance. Website modes
+use browser localStorage; **preferences are per-device, not synced via an
+account API**. This changes only the *map basemap*, not the full application
+interface. Neither mode requires MapTiler or any API key.
+
+The demo centers on Dallas, Texas. Streets and Junction presets let you
+compare both modes at fixed camera positions and zooms. Camera pitch and tilt
+gestures remain locked to zero. Map provider attribution stays visible.
 
 ## Stage B limitations and device checklist
 
 **Not turn-by-turn navigation.** There is intentionally no live position,
 route, guidance, GPS permission, or SmartZoom yet (those are Stage C/D tasks).
 Verify on a real device before integrating:
-- Compare NightRider Midnight against both unmodified OpenFreeMap styles at
+- Compare Light Midnight against Dark Original at
   identical camera positions. Midnight should keep dark land while revealing
   local roads, major roads, highway ramps and readable street labels.
 - Pitch stays flat after gestures and style switches.
 - Pan, pinch zoom, and both preset buttons work.
 - Rendering is smooth without native crashes (check Vulkan/OpenGL compatibility).
 - Map attribution is visible, styles load on mobile data, and offline failures
-  fail gracefully. Test MapTiler with a test-only API key if desired.
+  fail gracefully. Verify both map modes with Wi-Fi and mobile data.
 
 ## Development dependencies and cost
 
 This prototype pins `org.maplibre.gl:android-sdk:13.6.1` from Maven Central.
 MapLibre Android is BSD-licensed. OpenFreeMap's hosted public styles currently
 advertise free use without API keys; they require attribution and availability
-is not guaranteed. MapTiler requires its own API key and its pricing/terms apply.
+is not guaranteed. No MapTiler integration is loaded or billed by the preview.
 No paid service is provisioned by this repository.
 
 Stage C can add static road-aligned route overlays and simulated SmartZoom.
