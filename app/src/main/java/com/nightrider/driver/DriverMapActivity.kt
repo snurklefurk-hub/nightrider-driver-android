@@ -118,6 +118,13 @@ class DriverMapActivity : Activity(), LocationListener {
             }
         }
     }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FieldTestPanel.EXPORT_CSV_REQUEST && resultCode == RESULT_OK) {
+            data?.data?.let { fieldTest?.writeCsv(it) }
+        }
+    }
+
     override fun onStart() { super.onStart(); mapView.onStart() }
     override fun onResume() {
         super.onResume(); mapView.onResume()
