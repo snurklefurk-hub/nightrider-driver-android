@@ -84,7 +84,7 @@ class PreviewActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, 0)
         }
-        listOf("Light · Midnight", "Dark · Original").forEachIndexed { index, label ->
+        listOf("Light", "Dark").forEachIndexed { index, label ->
             val button = makeButton(label).apply { setOnClickListener { selectStyle(index) } }
             styles.addView(button, LinearLayout.LayoutParams(
                 0, dp(42), 1f).apply { marginEnd = if (index == 1) 0 else dp(6) })
