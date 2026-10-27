@@ -23,7 +23,7 @@ on:
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
-      - 'tests/test_package.py'
+      - 'tests/**'
       - '.github/workflows/build-apk.yml'
   push:
     branches: [ main, master ]
@@ -32,7 +32,7 @@ on:
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
-      - 'tests/test_package.py'
+      - 'tests/**'
       - '.github/workflows/build-apk.yml'
 
 permissions:
@@ -116,7 +116,7 @@ jobs:
         working-directory: ${{ steps.find.outputs.dir }}
         run: |
           set -o pipefail
-          gradle assembleDebug --no-daemon --stacktrace --warning-mode all 2>&1 | tee build.log
+          gradle testDebugUnitTest assembleDebug --no-daemon --stacktrace --warning-mode all 2>&1 | tee build.log
 
       - name: Keep the build log, pass or fail
         if: always()
@@ -187,4 +187,3 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 90
-

@@ -118,6 +118,14 @@
             android:text="@string/update_install_button"
             android:visibility="gone" />
 
+        <Button
+            android:id="@+id/mapSimulator"
+            style="@style/NrButton.Alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Map simulator" />
+
         <CheckBox
             android:id="@+id/keepAwake"
             android:layout_width="match_parent"
@@ -144,4 +152,3 @@
             android:text="@string/close" />
     </LinearLayout>
 </ScrollView>
-

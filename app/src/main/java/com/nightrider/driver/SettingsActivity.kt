@@ -83,6 +83,9 @@ class SettingsActivity : Activity() {
             }
         }
         close.setOnClickListener { finish() }
+        findViewById<Button>(R.id.mapSimulator).setOnClickListener {
+            startActivity(Intent(this, DriverMapActivity::class.java).putExtra("simulation", true))
+        }
         checkForUpdates()
     }
 
@@ -178,4 +181,3 @@ class SettingsActivity : Activity() {
             .show()
     }
 }
-
