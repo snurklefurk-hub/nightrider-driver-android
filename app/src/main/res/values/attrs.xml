@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="nrAccent" format="color" />
+    <attr name="nrSecondary" format="color" />
+    <attr name="nrText" format="color" />
+    <attr name="nrMuted" format="color" />
+    <attr name="nrDanger" format="color" />
+    <attr name="nrTopbar" format="color" />
+    <attr name="nrPrimaryButtonText" format="color" />
+    <attr name="nrSecondaryButtonText" format="color" />
+    <attr name="nrPanelBackground" format="reference" />
+    <attr name="nrPrimaryButton" format="reference" />
+    <attr name="nrSecondaryButton" format="reference" />
+</resources>
