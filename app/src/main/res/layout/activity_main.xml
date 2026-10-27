@@ -13,7 +13,7 @@
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/void_night"
+        android:background="?attr/nrTopbar"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="12dp"
@@ -60,7 +60,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/login_heading"
-                android:textColor="@color/ice"
+                android:textColor="?attr/nrText"
                 android:textSize="24sp" />
 
             <TextView
@@ -68,7 +68,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/login_help"
-                android:textColor="@color/mist"
+                android:textColor="?attr/nrMuted"
                 android:textSize="13sp" />
 
             <EditText
@@ -76,26 +76,26 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:backgroundTint="@color/cyan"
+                android:backgroundTint="?attr/nrAccent"
                 android:hint="@string/hint_name"
                 android:imeOptions="actionNext"
                 android:inputType="textPersonName"
                 android:maxLines="1"
-                android:textColor="@color/ice"
-                android:textColorHint="@color/mist" />
+                android:textColor="?attr/nrText"
+                android:textColorHint="?attr/nrMuted" />
 
             <EditText
                 android:id="@+id/passInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:backgroundTint="@color/cyan"
+                android:backgroundTint="?attr/nrAccent"
                 android:hint="@string/hint_password"
                 android:imeOptions="actionDone"
                 android:inputType="textPassword"
                 android:maxLines="1"
-                android:textColor="@color/ice"
-                android:textColorHint="@color/mist" />
+                android:textColor="?attr/nrText"
+                android:textColorHint="?attr/nrMuted" />
 
             <Button
                 android:id="@+id/loginButton"
@@ -110,7 +110,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="@color/rose"
+                android:textColor="?attr/nrDanger"
                 android:textSize="13sp" />
         </LinearLayout>
     </ScrollView>
@@ -135,7 +135,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/rose"
+            android:textColor="?attr/nrDanger"
             android:textSize="12sp" />
 
         <ScrollView
@@ -191,7 +191,7 @@
             android:layout_width="match_parent"
             android:layout_height="270dp"
             android:layout_marginTop="8dp"
-            android:background="@drawable/panel"
+            android:background="?attr/nrPanelBackground"
             android:padding="8dp">
 
             <LinearLayout
@@ -206,7 +206,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/cyan"
+            android:textColor="?attr/nrAccent"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -222,7 +222,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/chat_private_dispatch"
-                android:textColor="@color/mist"
+                android:textColor="?attr/nrMuted"
                 android:textSize="12sp" />
 
             <EditText
@@ -230,13 +230,13 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:backgroundTint="@color/cyan"
+                android:backgroundTint="?attr/nrAccent"
                 android:hint="@string/chat_hint"
                 android:imeOptions="actionSend"
                 android:inputType="textCapSentences"
                 android:maxLines="1"
-                android:textColor="@color/ice"
-                android:textColorHint="@color/mist" />
+                android:textColor="?attr/nrText"
+                android:textColorHint="?attr/nrMuted" />
 
             <Button
                 android:id="@+id/chatSend"
