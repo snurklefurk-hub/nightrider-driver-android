@@ -19,8 +19,9 @@ access. You do **not** need to be signed into a driver account.
    for testing, **not** used for actual navigation.
 4. Pan the map to disable Follow. Tap **Recenter** to resume following your GPS.
    **Stop recording** ends collection; **Clear trace** discards it.
-5. Use **Share CSV** only when you intend to export your trace. The share
-   chooser warns that it contains precise locations; choose a trusted target.
+5. Use **Save CSV** to choose a destination with Android's file picker, then
+   open that file in the Web Map Lab for a local overlay. **Share text** instead
+   passes the precise coordinates to an app you explicitly select.
 
 Privacy and scope: location fixes and trails stay in memory, are never
 persisted across screen closure, and are never sent to NightRider, a dispatch
