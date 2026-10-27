@@ -127,5 +127,31 @@ class LauncherIconTests(unittest.TestCase):
                                  "%s/%s.png" % (density, stem))
 
 
+
+class MapPreviewIsolationTests(unittest.TestCase):
+    """Keep the experimental vector Map Lab out of the signed driver app."""
+
+    def test_preview_uses_a_different_application_id(self):
+        with open(p("nav-prototype", "prototype", "build.gradle"),
+                  encoding="utf-8") as fh:
+            build = fh.read()
+        self.assertIn("applicationId 'com.nightrider.navpreview'", build)
+        self.assertNotIn("applicationId 'com.nightrider.driver'", build)
+
+    def test_preview_manifest_does_not_request_driver_privileges(self):
+        manifest = ET.parse(p("nav-prototype", "prototype", "src",
+                              "main", "AndroidManifest.xml")).getroot()
+        declared = {item.get(ANDROID + "name") for item in
+                    manifest.iter("uses-permission")}
+        self.assertIn("android.permission.INTERNET", declared)
+        for permission in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION",
+                           "ACCESS_BACKGROUND_LOCATION", "REQUEST_INSTALL_PACKAGES",
+                           "WAKE_LOCK"):
+            self.assertNotIn("android.permission." + permission, declared)
+        app = manifest.find("application")
+        self.assertEqual(app.get(ANDROID + "allowBackup"), "false")
+
+
+
 if __name__ == "__main__":
     unittest.main()
