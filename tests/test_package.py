@@ -83,10 +83,8 @@ class BuildConfigTests(unittest.TestCase):
         self.assertIn("targetSdk 34", self.text)
         self.assertIn("compileSdk 34", self.text)
 
-    def test_no_remote_dependencies(self):
-        # The build must not need Maven: the dependencies block is empty.
-        tail = self.text.split("dependencies {")[-1]
-        self.assertEqual(tail.strip().splitlines()[0].strip(), "}")
+    def test_maplibre_version_is_pinned(self):
+        self.assertIn("org.maplibre.gl:android-sdk:13.6.1", self.text)
 
 
 class LauncherIconTests(unittest.TestCase):
