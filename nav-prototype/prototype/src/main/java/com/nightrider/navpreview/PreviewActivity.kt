@@ -1,17 +1,14 @@
 package com.nightrider.navpreview
 
 import android.app.Activity
-import android.app.AlertDialog
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
-import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -30,7 +27,7 @@ import org.maplibre.android.style.layers.PropertyFactory
 
 /**
  * Standalone Stage B map comparison. No NightRider session, backend, ride,
- * GPS location or routing services are used. MapTiler key exists in RAM only.
+ * GPS location or routing services are used. No third-party API keys are needed.
  */
 class PreviewActivity : Activity() {
     private lateinit var mapView: MapView
@@ -38,7 +35,7 @@ class PreviewActivity : Activity() {
     private var map: MapLibreMap? = null
     private val styleButtons = mutableListOf<Button>()
     private var selectedStyle = 0
-    private var mapTilerKey: String? = null
+    private val modePrefs by lazy { getSharedPreferences("nightrider_map_mode", MODE_PRIVATE) }
 
     private val canvasColor = Color.rgb(3, 11, 8)
     private val surface = Color.rgb(11, 29, 19)
@@ -87,10 +84,10 @@ class PreviewActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, 0)
         }
-        listOf("Midnight", "Fiord", "Dark").forEachIndexed { index, label ->
+        listOf("Light · Midnight", "Dark · Original").forEachIndexed { index, label ->
             val button = makeButton(label).apply { setOnClickListener { selectStyle(index) } }
             styles.addView(button, LinearLayout.LayoutParams(
-                0, dp(42), 1f).apply { marginEnd = if (index == 2) 0 else dp(6) })
+                0, dp(42), 1f).apply { marginEnd = if (index == 1) 0 else dp(6) })
             styleButtons.add(button)
         }
         controls.addView(styles)
@@ -99,23 +96,17 @@ class PreviewActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(8), 0, 0)
         }
-        val mapTiler = makeButton("MapTiler*").apply {
-            setOnClickListener {
-                if (mapTilerKey.isNullOrBlank()) askMapTilerKey() else selectStyle(3)
-            }
-        }
         val streets = makeButton("Streets").apply {
             setOnClickListener { centerAt(32.7767, -96.7970, 14.2) }
         }
         val junction = makeButton("Junction").apply {
             setOnClickListener { centerAt(32.9244, -96.7612, 15.2) }
         }
-        listOf(mapTiler, streets, junction).forEachIndexed { i, button ->
+        listOf(streets, junction).forEachIndexed { i, button ->
             presets.addView(button, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
-                marginEnd = if (i == 2) 0 else dp(6)
+                marginEnd = if (i == 1) 0 else dp(6)
             })
         }
-        styleButtons.add(mapTiler)
         controls.addView(presets)
 
         status = TextView(this).apply {
@@ -126,7 +117,7 @@ class PreviewActivity : Activity() {
         }
         controls.addView(status)
         controls.addView(TextView(this).apply {
-            text = "Pan / pinch to inspect roads. Pitch locked to 0°. No GPS, live rides, or guidance. *MapTiler needs your own key."
+            text = "Light: NightRider Midnight. Dark: OpenFreeMap Original Dark. Pan / pinch to inspect roads. Camera is flat; no GPS or ride data."
             textSize = 10f
             setTextColor(silver)
             setPadding(0, dp(5), 0, 0)
@@ -141,7 +132,10 @@ class PreviewActivity : Activity() {
             map = readyMap
             readyMap.setMinPitchPreference(0.0)
             readyMap.setMaxPitchPreference(0.0)
-            selectStyle(0)
+            val defaultDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+            val saved = modePrefs.getString("map_mode", null)
+            selectStyle(if (saved == "light") 0 else if (saved == "dark") 1 else if (defaultDark) 1 else 0)
         }
     }
 
@@ -152,20 +146,17 @@ class PreviewActivity : Activity() {
 
     private fun selectStyle(index: Int) {
         val readyMap = map ?: return
-        // Midnight recolors Fiord's vector layers, preserving original map data.
-        val url = when (index) {
-            0, 1 -> "https://tiles.openfreemap.org/styles/fiord"
-            2 -> "https://tiles.openfreemap.org/styles/dark"
-            else -> "https://api.maptiler.com/maps/streets-v4-dark/style.json?key=" +
-                Uri.encode(mapTilerKey ?: return)
-        }
+        // Light recolors Fiord's vector layers; Dark uses Original Dark as-is.
+        if (index !in 0..1) return
+        val url = if (index == 0) "https://tiles.openfreemap.org/styles/fiord"
+            else "https://tiles.openfreemap.org/styles/dark"
         selectedStyle = index
+        modePrefs.edit().putString("map_mode", if (index == 0) "light" else "dark").apply()
         styleButtons.forEachIndexed { i, b ->
             b.background = pill(i == index)
             b.setTextColor(if (i == index) canvasColor else green)
         }
-        val label = listOf("NightRider Midnight", "OpenFreeMap Fiord", "OpenFreeMap Dark",
-            "MapTiler Streets Dark")[index]
+        val label = if (index == 0) "Light · NightRider Midnight" else "Dark · OpenFreeMap Original"
         status.text = "Loading $label…"
         // Runtime overrides are applied only to the freshly loaded Midnight style.
         readyMap.setStyle(url) { loadedStyle ->
@@ -233,28 +224,6 @@ class PreviewActivity : Activity() {
         (style.getLayer("place_other") as? SymbolLayer)?.setProperties(
             PropertyFactory.textOpacity(0.2f)
         )
-    }
-
-    private fun askMapTilerKey() {
-        val input = EditText(this).apply {
-            hint = "MapTiler API key"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            setSingleLine(true)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Optional MapTiler comparison")
-            .setMessage("A MapTiler API key is required. It is used for map requests only and is not saved to disk, sent to NightRider, or included in the APK.")
-            .setView(input)
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Load map") { _, _ ->
-                val key = input.text.toString().trim()
-                if (key.isNotEmpty()) {
-                    mapTilerKey = key
-                    selectStyle(3)
-                } else {
-                    status.text = "MapTiler key not provided; Fiord and Dark are available without one."
-                }
-            }.show()
     }
 
     private fun makeButton(label: String): Button = Button(this).apply {
