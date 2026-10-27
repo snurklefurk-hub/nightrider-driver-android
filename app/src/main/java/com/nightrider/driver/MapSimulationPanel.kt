@@ -154,6 +154,7 @@ class MapSimulationPanel(private val activity: Activity, saved: Bundle?, private
         progress.isEnabled = engine.stage !in listOf(SimulationStage.WAITING, SimulationStage.ARRIVED, SimulationStage.COMPLETE)
         updating = true; progress.progress = (engine.progress * 1000).toInt(); updating = false
     }
+    fun setFollow(enabled: Boolean) { follow = enabled; publish() }
     private fun publish() { render(); changed() }
     fun resume() { if (resumed) return; resumed = true; lastTick = SystemClock.elapsedRealtime(); handler.post(tick) }
     fun pause() { resumed = false; handler.removeCallbacks(tick) }
