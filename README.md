@@ -33,6 +33,18 @@ an installed signed release. See [GET-THE-APK.md](GET-THE-APK.md) for both paths
 Use **Settings → Log out** to end the session on the phone. If you forget your
 password, contact dispatch; they can reset it after verifying your identity.
 
+## Optional appearance
+
+Under **Settings → Appearance**, enable **Frutiger Aero** for a sky-blue
+glass style with glossy blue and green buttons, pale panels and readable dark
+text. The existing Midnight Transit / Verdant appearance remains the default.
+Your choice is saved locally on the phone and takes effect as the active
+screen is recreated, without logging you out or changing ride state.
+
+The separate **Map Preview** test app has its own independent **Aero UI /
+Classic UI** switch. Neither UI appearance switch changes the **Light / Dark
+vector basemap** selection or connects the Driver app to Map Lab.
+
 ## Build from source
 
 Both Android workflows install Java 17 and Gradle 8.7. Android Studio is
