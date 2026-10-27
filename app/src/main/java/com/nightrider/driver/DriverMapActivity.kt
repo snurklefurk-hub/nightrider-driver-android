@@ -58,14 +58,15 @@ class DriverMapActivity : Activity(), LocationListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        if (prefs.aeroEnabled) setTheme(R.style.Theme_NightRider_Aero)
+        super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(7,27,18)) }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(if (prefs.aeroEnabled) Color.rgb(225,247,255) else Color.rgb(7,27,18)) }
         val controls = LinearLayout(this)
         controls.addView(Button(this).apply { text = "Back"; setOnClickListener { finish() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         controls.addView(Button(this).apply { text = "Recenter"; setOnClickListener { centerMap() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        status = TextView(this).apply { setTextColor(Color.WHITE); setPadding(20,10,20,10); text = "Loading map…" }
+        status = TextView(this).apply { setTextColor(if (prefs.aeroEnabled) Color.rgb(18,61,87) else Color.WHITE); setPadding(20,10,20,10); text = "Loading map…" }
         mapView = MapView(this)
         root.addView(controls); root.addView(status)
         root.addView(mapView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -75,8 +76,10 @@ class DriverMapActivity : Activity(), LocationListener {
             map = ready
             ready.setMinPitchPreference(0.0); ready.setMaxPitchPreference(0.0)
             ready.cameraPosition = CameraPosition.Builder().target(LatLng(32.0811, -81.0911)).zoom(12.0).tilt(0.0).build()
-            ready.setStyle("https://tiles.openfreemap.org/styles/fiord") { style ->
-                applyMidnightPalette(style)
+            val styleUrl = if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
+                else "https://tiles.openfreemap.org/styles/dark"
+            ready.setStyle(styleUrl) { style ->
+                if (prefs.aeroEnabled) applyMidnightPalette(style)
                 updateMap()
             }
         }
