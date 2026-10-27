@@ -37,15 +37,25 @@ class PreviewActivity : Activity() {
     private var selectedStyle = 0
     private val modePrefs by lazy { getSharedPreferences("nightrider_map_mode", MODE_PRIVATE) }
 
-    private val canvasColor = Color.rgb(3, 11, 8)
-    private val surface = Color.rgb(11, 29, 19)
-    private val green = Color.rgb(46, 230, 160)
-    private val cyan = Color.rgb(47, 233, 255)
-    private val silver = Color.rgb(143, 174, 179)
-    private val white = Color.rgb(243, 253, 251)
+    private var aeroUi = false
+    private var canvasColor = Color.rgb(3, 11, 8)
+    private var surface = Color.rgb(11, 29, 19)
+    private var green = Color.rgb(46, 230, 160)
+    private var cyan = Color.rgb(47, 233, 255)
+    private var silver = Color.rgb(143, 174, 179)
+    private var white = Color.rgb(243, 253, 251)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        aeroUi = modePrefs.getBoolean("aero_ui", false)
+        if (aeroUi) {
+            canvasColor = Color.rgb(225, 247, 255)
+            surface = Color.rgb(242, 252, 255)
+            green = Color.rgb(8, 118, 184)
+            cyan = Color.rgb(8, 118, 184)
+            silver = Color.rgb(65, 101, 121)
+            white = Color.rgb(18, 61, 87)
+        }
         // Must initialize before constructing MapView.
         MapLibre.getInstance(this)
         val mapOptions = MapLibreMapOptions.createFromAttributes(this, null)
@@ -102,9 +112,15 @@ class PreviewActivity : Activity() {
         val junction = makeButton("Junction").apply {
             setOnClickListener { centerAt(32.9244, -96.7612, 15.2) }
         }
-        listOf(streets, junction).forEachIndexed { i, button ->
+        val uiSwitch = makeButton(if (aeroUi) "Classic UI" else "Aero UI").apply {
+            setOnClickListener {
+                modePrefs.edit().putBoolean("aero_ui", !aeroUi).apply()
+                recreate()
+            }
+        }
+        listOf(streets, junction, uiSwitch).forEachIndexed { i, button ->
             presets.addView(button, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
-                marginEnd = if (i == 1) 0 else dp(6)
+                marginEnd = if (i == 2) 0 else dp(6)
             })
         }
         controls.addView(presets)
@@ -154,7 +170,7 @@ class PreviewActivity : Activity() {
         modePrefs.edit().putString("map_mode", if (index == 0) "light" else "dark").apply()
         styleButtons.forEachIndexed { i, b ->
             b.background = pill(i == index)
-            b.setTextColor(if (i == index) canvasColor else green)
+            b.setTextColor(if (i == index) (if (aeroUi) Color.WHITE else canvasColor) else green)
         }
         val label = if (index == 0) "Light" else "Dark"
         status.text = "Loading $label…"
@@ -237,16 +253,26 @@ class PreviewActivity : Activity() {
         setPadding(dp(4), 0, dp(4), 0)
     }
 
-    private fun pill(selected: Boolean): GradientDrawable = GradientDrawable().apply {
-        setColor(if (selected) green else surface)
-        cornerRadius = dp(24).toFloat()
-        setStroke(dp(1), green)
-    }
+    private fun pill(selected: Boolean): GradientDrawable =
+        if (aeroUi) GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            if (selected) intArrayOf(Color.rgb(110, 213, 248), Color.rgb(8, 118, 184))
+            else intArrayOf(Color.WHITE, Color.rgb(211, 239, 250))
+        ).apply {
+            cornerRadius = dp(24).toFloat()
+            setStroke(dp(1), green)
+        } else GradientDrawable().apply {
+            setColor(if (selected) green else surface)
+            cornerRadius = dp(24).toFloat()
+            setStroke(dp(1), green)
+        }
 
     private fun roundedSurface(): GradientDrawable = GradientDrawable().apply {
-        setColor(Color.argb(242, 7, 20, 13))
-        cornerRadius = dp(14).toFloat()
-        setStroke(dp(1), Color.argb(130, 46, 230, 160))
+        setColor(if (aeroUi) Color.argb(246, 246, 252, 255)
+            else Color.argb(242, 7, 20, 13))
+        cornerRadius = dp(18).toFloat()
+        setStroke(dp(1), if (aeroUi) Color.rgb(255, 255, 255)
+            else Color.argb(130, 46, 230, 160))
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
