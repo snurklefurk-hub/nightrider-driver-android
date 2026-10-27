@@ -16,7 +16,6 @@ object NavigationMarker {
         val scale = context.resources.displayMetrics.density
         val size = (58 * scale).roundToInt()
         val middle = size / 2f
-        val canvas = Canvas(Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888))
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val drawing = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
