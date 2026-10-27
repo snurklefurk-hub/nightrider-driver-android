@@ -112,6 +112,10 @@ class DriverMapActivity : Activity(), LocationListener {
             ready.setMinPitchPreference(0.0); ready.setMaxPitchPreference(0.0)
             ready.uiSettings.isRotateGesturesEnabled = false
             ready.uiSettings.isTiltGesturesEnabled = false
+            // Keep MapLibre and OSM attribution visible above the lower route card.
+            val footerInset = (138 * resources.displayMetrics.density).toInt()
+            ready.uiSettings.setAttributionMargins(0, 0, 12, footerInset)
+            ready.uiSettings.setLogoMargins(12, 0, 0, footerInset)
             ready.addOnMoveListener(object : MapLibreMap.OnMoveListener {
                 override fun onMoveBegin(detector: MoveGestureDetector) {
                     navigationFollow = false
