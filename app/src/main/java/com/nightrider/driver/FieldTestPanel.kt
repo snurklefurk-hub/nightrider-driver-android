@@ -2,6 +2,7 @@ package com.nightrider.driver
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.location.Location
 import android.view.View
@@ -10,6 +11,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import org.maplibre.android.geometry.LatLng
 import java.util.Locale
 
@@ -32,6 +34,7 @@ class FieldTestPanel(
     private val recordButton = Button(activity)
     private val followButton = Button(activity)
     private val shareButton = Button(activity)
+    private val saveButton = Button(activity)
     private val diagnostics = TextView(activity)
     val view: View
 
@@ -63,14 +66,17 @@ class FieldTestPanel(
             text = "Clear pin"
             setOnClickListener { destination = null; routeRequested() }
         }
+        shareButton.text = "Share text"
         shareButton.setOnClickListener { share() }
+        saveButton.text = "Save CSV"
+        saveButton.setOnClickListener { saveToFile() }
         val clearTraceButton = Button(activity).apply {
             text = "Clear trace"
             setOnClickListener { trace.clear(); render(); changed() }
         }
         panel.addView(row(recordButton, followButton))
         panel.addView(row(routeButton, clearButton))
-        panel.addView(row(shareButton, clearTraceButton))
+        panel.addView(row(saveButton, shareButton, clearTraceButton))
         diagnostics.textSize = 12f
         panel.addView(diagnostics)
         view = ScrollView(activity).apply {
@@ -124,6 +130,7 @@ class FieldTestPanel(
         recordButton.text = if (trace.recording) "Stop recording" else "Record new trace"
         followButton.text = if (follow) "Follow: ON" else "Follow: OFF"
         shareButton.isEnabled = trace.samples.isNotEmpty()
+        saveButton.isEnabled = trace.samples.isNotEmpty()
         val fix = latest
         val age = fix?.let { ((System.currentTimeMillis() - it.time) / 1000L).coerceAtLeast(0L) }
         val gps = when {
@@ -138,6 +145,31 @@ class FieldTestPanel(
             String.format(Locale.US, "%.2f", trace.distanceMeters() / 1609.344) +
             " mi traced · " + (if (destination == null) "No test pin" else "Test pin set")
     }
+
+    private fun saveToFile() {
+        if (trace.samples.isEmpty()) return
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/csv"
+            putExtra(Intent.EXTRA_TITLE, "nightrider-field-trace.csv")
+        }
+        // SAF asks the tester where to save. No storage permission required.
+        activity.startActivityForResult(intent, EXPORT_CSV_REQUEST)
+    }
+
+    fun writeCsv(uri: Uri) {
+        if (trace.samples.isEmpty()) return
+        try {
+            val output = activity.contentResolver.openOutputStream(uri)
+                ?: throw IllegalStateException("Unable to open selected file")
+            output.use { it.write(trace.csv().toByteArray(Charsets.UTF_8)) }
+            Toast.makeText(activity, "GPS trace CSV saved.", Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(activity, "Could not save CSV. Try another location.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    companion object { const val EXPORT_CSV_REQUEST = 741 }
 
     private fun share() {
         if (trace.samples.isEmpty()) return
