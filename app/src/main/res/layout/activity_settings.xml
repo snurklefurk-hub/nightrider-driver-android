@@ -111,21 +111,30 @@
             android:layout_marginTop="22dp"
             android:text="@string/appearance_section" />
 
-        <CheckBox
-            android:id="@+id/aeroTheme"
+        <RadioGroup
+            android:id="@+id/appearanceMode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/aero_theme_setting"
-            android:textColor="?attr/nrText"
-            android:textSize="14sp" />
+            android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/aero_theme_help"
-            android:textColor="?attr/nrMuted"
-            android:textSize="12sp" />
+            <RadioButton
+                android:id="@+id/lightMode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:text="@string/mode_light"
+                android:textColor="?attr/nrText" />
+
+            <RadioButton
+                android:id="@+id/darkMode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:text="@string/mode_dark"
+                android:textColor="?attr/nrText" />
+        </RadioGroup>
 
         <CheckBox
             android:id="@+id/keepAwake"
