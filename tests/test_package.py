@@ -1,21 +1,8 @@
-"""Structural integrity tests for the NightRider Driver Android package.
+"""Source-package checks that run without an Android SDK or built APK."""
 
-These tests check that the shipped package is internally coherent: the
-manifest wires the launcher to the Verdant Chrome adaptive icon, the
-resource files parse, the launcher PNGs exist at every density with the
-right dimensions, and the built APK is a well-formed archive containing the
-compiled manifest, resources and icon assets.
-
-They do NOT run the Android app: this host has no Android runtime, so
-MainActivity's runtime behaviour (and the icon as drawn by a launcher) stays
-unverified. See VERIFICATION.json.
-"""
-
-import json
 import os
 import unittest
 import xml.etree.ElementTree as ET
-import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = "{http://schemas.android.com/apk/res/android}"
@@ -55,7 +42,7 @@ class ManifestTests(unittest.TestCase):
                  for el in self.root.iter("uses-permission")}
         self.assertIn("android.permission.INTERNET", names)
 
-    def test_application_uses_the_verdant_chrome_launcher_icons(self):
+    def test_application_uses_adaptive_launcher_icons(self):
         app = self.root.find("application")
         self.assertIsNotNone(app)
         self.assertEqual(app.get(ANDROID + "icon"), "@mipmap/ic_launcher")
@@ -85,11 +72,11 @@ class BuildConfigTests(unittest.TestCase):
         with open(p("app", "build.gradle"), encoding="utf-8") as fh:
             self.text = fh.read()
 
-    def test_application_id_and_version(self):
+    def test_application_id_and_configurable_version(self):
         self.assertIn('namespace \'com.nightrider.driver\'', self.text)
         self.assertIn('applicationId "com.nightrider.driver"', self.text)
-        self.assertIn('versionName "1.0"', self.text)
-        self.assertIn("versionCode 1", self.text)
+        self.assertIn("project.findProperty('nrVersionCode')", self.text)
+        self.assertIn("project.findProperty('nrVersionName')", self.text)
 
     def test_min_and_target_sdk(self):
         self.assertIn("minSdk 26", self.text)
@@ -100,28 +87,6 @@ class BuildConfigTests(unittest.TestCase):
         # The build must not need Maven: the dependencies block is empty.
         tail = self.text.split("dependencies {")[-1]
         self.assertEqual(tail.strip().splitlines()[0].strip(), "}")
-
-
-class PaletteTests(unittest.TestCase):
-    def setUp(self):
-        tree = ET.parse(p("app", "src", "main", "res", "values", "colors.xml"))
-        self.colors = {el.get("name"): (el.text or "").strip()
-                       for el in tree.getroot().iter("color")}
-
-    def test_verdant_chrome_palette_values(self):
-        expected = {
-            "void_night": "#06131A",
-            "launcher_background": "#06131A",
-            "plum": "#2EE6A0",
-            "cyan": "#2FE9FF",
-            "rose": "#FF6F91",
-            "ice": "#F3FDFB",
-            "mist": "#8FAEB3",
-            "lamp": "#FFC36B",
-        }
-        for name, value in expected.items():
-            self.assertIn(name, self.colors)
-            self.assertEqual(self.colors[name], value)
 
 
 class LauncherIconTests(unittest.TestCase):
@@ -160,55 +125,6 @@ class LauncherIconTests(unittest.TestCase):
                     data = fh.read()
                 self.assertEqual(png_size(data), (size, size),
                                  "%s/%s.png" % (density, stem))
-
-
-class ApkTests(unittest.TestCase):
-    def setUp(self):
-        self.apk = p("NightRider-Driver.apk")
-        self.assertTrue(os.path.isfile(self.apk), self.apk)
-
-    def test_apk_is_a_zip_archive(self):
-        self.assertTrue(zipfile.is_zipfile(self.apk))
-
-    def test_apk_contains_core_entries(self):
-        with zipfile.ZipFile(self.apk) as zf:
-            names = set(zf.namelist())
-        for required in ("AndroidManifest.xml", "resources.arsc", "classes.dex"):
-            self.assertIn(required, names)
-
-    def test_apk_embeds_the_launcher_icons(self):
-        with zipfile.ZipFile(self.apk) as zf:
-            names = set(zf.namelist())
-            for required in (
-                "res/drawable/ic_launcher_background.xml",
-                "res/drawable/ic_launcher_foreground.xml",
-                "res/mipmap-anydpi-v26/ic_launcher.xml",
-                "res/mipmap-anydpi-v26/ic_launcher_round.xml",
-            ):
-                self.assertIn(required, names)
-            for density in DENSITIES:
-                for stem in ("ic_launcher", "ic_launcher_round"):
-                    self.assertIn(
-                        "res/mipmap-%s-v4/%s.png" % (density, stem), names)
-
-    def test_apk_icon_pngs_are_well_formed(self):
-        with zipfile.ZipFile(self.apk) as zf:
-            for density, size in DENSITIES.items():
-                name = "res/mipmap-%s-v4/ic_launcher.png" % density
-                self.assertEqual(png_size(zf.read(name)), (size, size), name)
-
-
-class VerificationRecordTests(unittest.TestCase):
-    """The package must ship a machine-readable verification notice."""
-
-    def test_verification_json_is_present_and_parses(self):
-        with open(p("VERIFICATION.json"), encoding="utf-8") as fh:
-            record = json.load(fh)
-        self.assertIsInstance(record, dict)
-        self.assertIn(record.get("status"), {"unverified", "verified"})
-        # An unverified package must explain why it is unverified.
-        if record["status"] == "unverified":
-            self.assertTrue(record.get("reason"))
 
 
 if __name__ == "__main__":

@@ -2,9 +2,8 @@
 #
 # How to run it: on GitHub open the repo -> "Actions" tab -> pick
 # "Build driver app APK" on the left -> "Run workflow" button.
-# About 3-5 minutes later the finished APK is downloadable two ways:
-#   * the run's "Artifacts" box at the bottom of the run page
-#   * the repo's "Releases" page, as NightRider-Driver.apk (easiest link to share)
+# About 3-5 minutes later the debug APK is downloadable from the run's
+# "Artifacts" box. Signed pilot updates have a separate release workflow.
 #
 # This file works whether the Android project sits at the top of the repo or in
 # a sub-folder (for example "android/") - it finds settings.gradle itself.
@@ -30,7 +29,7 @@ on:
       - '.github/workflows/build-apk.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -179,23 +178,4 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 90
-
-      # Uses the gh command that already ships on the runner, so there is no
-      # third-party release action involved. A hiccup here does not fail the
-      # build - the Artifacts download above is the main path.
-      - name: Also put the APK on the Releases page
-        if: github.event_name != 'pull_request'
-        working-directory: ${{ steps.find.outputs.dir }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "driver-app-${GITHUB_RUN_NUMBER}" \
-            "out/NightRider-Driver.apk#NightRider-Driver.apk" \
-            --title "NightRider Driver app (build ${GITHUB_RUN_NUMBER})" \
-            --notes "Installable Android app for NightRider drivers.
-
-          Tap NightRider-Driver.apk below to download it, open it on the phone,
-          and allow installing from this source. Sign in with the NightRider
-          driver username and password provided by dispatch."
 

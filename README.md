@@ -9,25 +9,19 @@ driver accounts and gives each driver their sign-in details privately. The app
 stores only an encrypted session token in Android Keystore; it does not save the
 password. Riders and dispatch use the website.
 
-## Get a current APK
+## Get the driver app
 
-Build the APK from GitHub Actions:
+The **signed NightRider release** is the update channel for installed pilot
+devices. Open this repository's **Releases** page, choose the newest release
+whose tag begins `nr-driver-v`, and download its `NightRider-Driver.apk` for a
+first installation. Older `driver-app-` releases are debug builds. Once installed, use
+**Settings → Check for updates** inside the app for later versions. Android
+will ask you to approve each installation. See [IN-APP-UPDATES.md](IN-APP-UPDATES.md)
+for the signing and update details.
 
-1. After the account-enabled code is merged, open this repository's **Actions**
-   tab.
-2. Select **Build driver app APK** and choose **Run workflow**, or open the
-   automatic build from the latest code change.
-3. Download `NightRider-Driver.apk` from the run's **Artifacts** box. Builds on
-   the default branch are also published on the **Releases** page.
-
-The APK included in older source archives predates NightRider server accounts.
-Do not install it. Install the APK from a build of the account-enabled source.
-If Android reports a signature conflict when replacing an older copy, uninstall
-the old app, then install the new APK.
-
-To install, move the APK to the Android phone, tap it, allow installs from that
-source when prompted, and finish installation. This is a debug build for the
-NightRider pilot, not a Play Store release.
+The separate **Build driver app APK** workflow produces a debug artifact for
+development checks. A debug APK uses a different signing key and cannot update
+an installed signed release. See [GET-THE-APK.md](GET-THE-APK.md) for both paths.
 
 ## Sign in
 
@@ -41,9 +35,9 @@ password, contact dispatch; they can reset it after verifying your identity.
 
 ## Build from source
 
-The `.github/workflows/build-apk.yml` workflow installs Java 17 and Gradle 8.7,
-then builds the installable APK. Android Studio is optional. This project uses
-the Android framework and has no app libraries to download.
+Both Android workflows install Java 17 and Gradle 8.7. Android Studio is
+optional. The production driver module uses only the Android framework; the
+separate `nav-prototype/` Map Lab uses MapLibre for visual experiments.
 
 ## Permissions
 
