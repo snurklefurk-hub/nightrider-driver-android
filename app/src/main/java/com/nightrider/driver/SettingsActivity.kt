@@ -9,6 +9,7 @@ import android.view.View
 import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import org.json.JSONObject
@@ -65,12 +66,13 @@ class SettingsActivity : Activity() {
         serverValue.text = Prefs.SERVER
         keepAwake.isChecked = prefs.keepAwake
         keepAwake.setOnCheckedChangeListener { _, checked -> prefs.keepAwake = checked }
-        val aeroTheme = findViewById<CheckBox>(R.id.aeroTheme)
-        aeroTheme.isChecked = prefs.aeroEnabled
-        aeroTheme.setOnCheckedChangeListener { _, enabled ->
-            if (enabled != prefs.aeroEnabled) {
-                prefs.aeroEnabled = enabled
-                recreate() // Keep the active session; re-inflate with the matching theme.
+        val appearance = findViewById<RadioGroup>(R.id.appearanceMode)
+        appearance.check(if (prefs.aeroEnabled) R.id.lightMode else R.id.darkMode)
+        appearance.setOnCheckedChangeListener { _, selected ->
+            val light = selected == R.id.lightMode
+            if (selected != -1 && light != prefs.aeroEnabled) {
+                prefs.aeroEnabled = light
+                recreate() // Preserve the signed-in session and switch the entire UI.
             }
         }
 

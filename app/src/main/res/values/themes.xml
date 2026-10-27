@@ -27,6 +27,8 @@
     </style>
 
     <style name="Theme.NightRider.Aero" parent="Theme.NightRider">
+        <!-- Rounded humanist lettering to match the web LIGHT Nunito Sans style. -->
+        <item name="android:fontFamily">sans-serif-rounded</item>
         <item name="android:colorPrimary">@color/aero_blue</item>
         <item name="android:colorPrimaryDark">@color/aero_status</item>
         <item name="android:colorAccent">@color/aero_blue</item>

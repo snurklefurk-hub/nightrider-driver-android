@@ -170,7 +170,7 @@ class AeroThemeTests(unittest.TestCase):
                      "bubble_aero_private"):
             ET.parse(p("app", "src", "main", "res", "drawable", name + ".xml"))
 
-    def test_aero_setting_is_separate_from_session_and_map_modes(self):
+    def test_one_light_dark_setting_preserves_session_and_map_is_unified(self):
         with open(p("app", "src", "main", "java", "com", "nightrider",
                     "driver", "Prefs.kt"), encoding="utf-8") as fh:
             prefs = fh.read()
@@ -179,7 +179,24 @@ class AeroThemeTests(unittest.TestCase):
         with open(p("app", "src", "main", "res", "layout",
                     "activity_settings.xml"), encoding="utf-8") as fh:
             layout = fh.read()
-        self.assertIn('android:id="@+id/aeroTheme"', layout)
+        self.assertIn('android:id="@+id/appearanceMode"', layout)
+        self.assertIn('android:id="@+id/lightMode"', layout)
+        self.assertIn('android:id="@+id/darkMode"', layout)
+        self.assertNotIn('android:id="@+id/aeroTheme"', layout)
+        with open(p("nav-prototype", "prototype", "src", "main", "java",
+                    "com", "nightrider", "navpreview", "PreviewActivity.kt"),
+                  encoding="utf-8") as fh:
+            preview = fh.read()
+        self.assertIn('listOf("LIGHT", "DARK")', preview)
+        self.assertIn('selectStyle(if (aeroUi) 0 else 1)', preview)
+        self.assertNotIn('putString("map_mode"', preview)
+        self.assertNotIn('"Aero UI"', preview)
+        self.assertNotIn('"Classic UI"', preview)
+        self.assertIn('Typeface.create("sans-serif-rounded"', preview)
+        with open(p("app", "src", "main", "res", "values", "themes.xml"),
+                  encoding="utf-8") as fh:
+            themes = fh.read()
+        self.assertIn('<item name="android:fontFamily">sans-serif-rounded</item>', themes)
         with open(p("app", "src", "main", "AndroidManifest.xml"),
                   encoding="utf-8") as fh:
             manifest = fh.read()
