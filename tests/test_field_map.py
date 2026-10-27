@@ -13,6 +13,8 @@ class FieldModeChecks(unittest.TestCase):
                        "requestLocationUpdates", "/api/", "sessionToken"):
             self.assertNotIn(unsafe, source)
         self.assertIn("Intent.ACTION_SEND", source)
+        self.assertIn("Intent.ACTION_CREATE_DOCUMENT", source)
+        self.assertIn("EXPORT_CSV_REQUEST", source)
         self.assertIn("trace.csv()", source)
 
     def test_field_screen_bypasses_live_ride_refresh(self):
