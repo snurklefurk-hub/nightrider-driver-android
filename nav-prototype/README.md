@@ -17,33 +17,19 @@ the `NightRider-Map-Preview` artifact, or open the `nav-prototype` folder as
 its own project in Android Studio and run `:prototype:assembleDebug`.
 Install its APK on Android 8+ as a second, separate app.
 
-## Optional Frutiger Aero interface
+## Unified LIGHT / DARK appearance
 
-The preview's **Aero UI / Classic UI** button changes only the laboratory
-controls and status panel, using light sky-blue glass and glossy aqua buttons.
-It is saved locally in the preview app's preferences; the Light/Dark vector
-basemaps remain independent. The production Driver app offers Aero separately
-under **Settings → Appearance**.
+The preview uses a **single LIGHT / DARK selector** for both its UI and vector
+basemap. LIGHT = Frutiger Aero controls with rounded humanist typography plus
+NightRider Midnight (recolored OpenFreeMap Fiord vectors). DARK = Classic
+NightRider controls plus unmodified OpenFreeMap Original Dark vectors.
 
-## Two ecosystem map modes
+The choice is stored locally as `aero_ui`, independently from web browsers
+and the production Driver app; the old independent `map_mode` preference is
+ignored. No API key or MapTiler usage is required.
 
-The standalone preview uses the same two **vector basemap modes** as the
-NightRider Rider website, Dispatch map and desktop web map lab:
-
-1. **Light · NightRider Midnight** — Fiord vector geometry recolored with the
-   NightRider navy-charcoal land, brighter road hierarchy and readable labels.
-2. **Dark · OpenFreeMap Original Dark** — upstream vector style without paint
-   overrides.
-
-The selected map mode persists locally in Android `SharedPreferences`; on the
-first launch it follows the Android system light/dark appearance. Website modes
-use browser localStorage; **preferences are per-device, not synced via an
-account API**. This changes only the *map basemap*, not the full application
-interface. Neither mode requires MapTiler or any API key.
-
-The demo centers on Dallas, Texas. Streets and Junction presets let you
-compare both modes at fixed camera positions and zooms. Camera pitch and tilt
-gestures remain locked to zero. Map provider attribution stays visible.
+The demo centers on Dallas. Streets and Junction presets remain available.
+Camera pitch and tilt gestures remain locked to zero.
 
 ## Stage B limitations and device checklist
 
