@@ -1,8 +1,8 @@
 package com.nightrider.navpreview
 
 import android.app.Activity
-import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
@@ -81,21 +81,25 @@ class PreviewActivity : Activity() {
         val title = TextView(this).apply {
             text = "NIGHTRIDER / MAP LAB"
             textSize = 15f
+            if (aeroUi) typeface = Typeface.create("sans-serif-rounded", Typeface.BOLD)
             setTextColor(cyan)
             letterSpacing = 0.12f
         }
         controls.addView(title)
-        controls.addView(TextView(this).apply {
-            text = "Stage B · isolated 2D basemap comparison"
-            textSize = 12f
-            setTextColor(silver)
-        })
         val styles = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, 0)
         }
-        listOf("Light", "Dark").forEachIndexed { index, label ->
-            val button = makeButton(label).apply { setOnClickListener { selectStyle(index) } }
+        listOf("LIGHT", "DARK").forEachIndexed { index, label ->
+            val button = makeButton(label).apply {
+                setOnClickListener {
+                    val light = index == 0
+                    if (aeroUi != light) {
+                        modePrefs.edit().putBoolean("aero_ui", light).apply()
+                        recreate() // Both the controls and basemap follow one appearance.
+                    }
+                }
+            }
             styles.addView(button, LinearLayout.LayoutParams(
                 0, dp(42), 1f).apply { marginEnd = if (index == 1) 0 else dp(6) })
             styleButtons.add(button)
@@ -112,15 +116,9 @@ class PreviewActivity : Activity() {
         val junction = makeButton("Junction").apply {
             setOnClickListener { centerAt(32.9244, -96.7612, 15.2) }
         }
-        val uiSwitch = makeButton(if (aeroUi) "Classic UI" else "Aero UI").apply {
-            setOnClickListener {
-                modePrefs.edit().putBoolean("aero_ui", !aeroUi).apply()
-                recreate()
-            }
-        }
-        listOf(streets, junction, uiSwitch).forEachIndexed { i, button ->
+        listOf(streets, junction).forEachIndexed { i, button ->
             presets.addView(button, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
-                marginEnd = if (i == 2) 0 else dp(6)
+                marginEnd = if (i == 1) 0 else dp(6)
             })
         }
         controls.addView(presets)
@@ -128,16 +126,11 @@ class PreviewActivity : Activity() {
         status = TextView(this).apply {
             text = "Loading map…"
             textSize = 12f
+            if (aeroUi) typeface = Typeface.create("sans-serif-rounded", Typeface.NORMAL)
             setTextColor(white)
             setPadding(0, dp(8), 0, 0)
         }
         controls.addView(status)
-        controls.addView(TextView(this).apply {
-            text = "Pan / pinch to zoom · 2D only · no live rides or GPS."
-            textSize = 10f
-            setTextColor(silver)
-            setPadding(0, dp(5), 0, 0)
-        })
         root.addView(controls, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP).apply {
             setMargins(dp(10), dp(10), dp(10), 0)
@@ -148,10 +141,7 @@ class PreviewActivity : Activity() {
             map = readyMap
             readyMap.setMinPitchPreference(0.0)
             readyMap.setMaxPitchPreference(0.0)
-            val defaultDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
-            val saved = modePrefs.getString("map_mode", null)
-            selectStyle(if (saved == "light") 0 else if (saved == "dark") 1 else if (defaultDark) 1 else 0)
+            selectStyle(if (aeroUi) 0 else 1)
         }
     }
 
@@ -167,18 +157,17 @@ class PreviewActivity : Activity() {
         val url = if (index == 0) "https://tiles.openfreemap.org/styles/fiord"
             else "https://tiles.openfreemap.org/styles/dark"
         selectedStyle = index
-        modePrefs.edit().putString("map_mode", if (index == 0) "light" else "dark").apply()
         styleButtons.forEachIndexed { i, b ->
             b.background = pill(i == index)
             b.setTextColor(if (i == index) (if (aeroUi) Color.WHITE else canvasColor) else green)
         }
-        val label = if (index == 0) "Light" else "Dark"
-        status.text = "Loading $label…"
+        val label = if (index == 0) "LIGHT" else "DARK"
+        status.text = "Loading…"
         // Runtime overrides are applied only to the freshly loaded Midnight style.
         readyMap.setStyle(url) { loadedStyle ->
             if (selectedStyle == index) {
                 if (index == 0) applyMidnightPalette(loadedStyle)
-                status.text = "$label · zoom/pan enabled · 2D only"
+                status.text = ""
             }
         }
     }
@@ -245,6 +234,7 @@ class PreviewActivity : Activity() {
     private fun makeButton(label: String): Button = Button(this).apply {
         text = label
         isAllCaps = false
+        if (aeroUi) typeface = Typeface.create("sans-serif-rounded", Typeface.BOLD)
         textSize = 11f
         setTextColor(green)
         background = pill(false)
