@@ -138,6 +138,13 @@
             android:textColor="?attr/nrDanger"
             android:textSize="12sp" />
 
+        <Button
+            android:id="@+id/driverMapButton"
+            style="@style/NrButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Open driver map" />
+
         <ScrollView
             android:id="@+id/boardScroll"
             android:layout_width="match_parent"
