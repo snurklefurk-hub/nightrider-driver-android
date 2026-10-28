@@ -106,7 +106,7 @@ class FieldTestPanel(
                 render()
             } else if (!videoPending && !videoStopping) {
                 videoPending = true
-                videoReady = false
+                // Keep any previous unsaved MP4 available if Android denies consent.
                 videoMessage = "Waiting for Android screen-capture permission…"
                 render()
                 screenAction(true)
@@ -129,6 +129,11 @@ class FieldTestPanel(
             text = "Clear trace"
             setOnClickListener {
                 if (videoRecording || videoPending || videoStopping) return@setOnClickListener
+                if (videoReady) {
+                    Toast.makeText(activity, "Save MP4 before clearing the paired trace.",
+                        Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 trace.clear()
                 videoSessionId = ""
                 videoReady = false
