@@ -45,6 +45,7 @@ class DriverMapActivity : Activity(), LocationListener {
     private val driverMarker by lazy { NavigationMarker.create(this, prefs.aeroEnabled) }
     private var navigationFollow = true
     private var rememberedHeading: Double? = null
+    private var navigationZoom: Double? = null
     private var routeDistanceM: Double? = null
     private var routeDurationS: Double? = null
     private lateinit var prefs: Prefs
@@ -135,7 +136,8 @@ class DriverMapActivity : Activity(), LocationListener {
             val styleUrl = if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
                 else "https://tiles.openfreemap.org/styles/dark"
             ready.setStyle(styleUrl) { style ->
-                if (prefs.aeroEnabled) applyMidnightPalette(style)
+                // One LIGHT/DARK preference; both styles use the same road hierarchy.
+                NavigationRoadStyle.apply(style, prefs.aeroEnabled)
                 updateMap()
             }
         }
@@ -270,9 +272,17 @@ class DriverMapActivity : Activity(), LocationListener {
         val bearing = navigationBearing(driver)
         val ahead = NavigationCameraMath.lookAhead(
             SimulationPoint(driver.latitude, driver.longitude), bearing, speed)
+        val bend = if (routePoints.size >= 3) NavigationCameraMath.nextBendMeters(
+            SimulationPoint(driver.latitude, driver.longitude),
+            routePoints.map { SimulationPoint(it.latitude, it.longitude) }
+        ) else null
+        val baseZoom = NavigationCameraMath.zoomForSpeed(speed)
+        val desiredZoom = NavigationCameraMath.zoomForUpcomingBend(baseZoom, bend)
+        val zoom = NavigationCameraMath.easeZoom(navigationZoom, desiredZoom)
+        navigationZoom = zoom
         val camera = CameraPosition.Builder()
             .target(LatLng(ahead.lat, ahead.lon))
-            .zoom(NavigationCameraMath.zoomForSpeed(speed))
+            .zoom(zoom)
             .bearing(bearing ?: 0.0)
             .tilt(0.0).build()
         m.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 450)
@@ -281,10 +291,10 @@ class DriverMapActivity : Activity(), LocationListener {
     private fun paintRoute(m: MapLibreMap) {
         if (routePoints.size < 2) return
         // Road-outline contrast is essential against both dark vector styles.
-        m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(20, 29, 46)).width(15f))
+        m.addPolyline(PolylineOptions().addAll(routePoints).color(Color.rgb(20, 29, 46)).width(17f))
         m.addPolyline(PolylineOptions().addAll(routePoints).color(
             if (prefs.aeroEnabled) Color.rgb(63, 132, 245) else Color.rgb(112, 181, 255)
-        ).width(9f))
+        ).width(10f))
     }
 
     private fun displayStage(stage: String): String = when (stage) {
@@ -335,6 +345,7 @@ class DriverMapActivity : Activity(), LocationListener {
         if (key != routeKey) {
             routeKey = key; routeGeneration++; routePoints = emptyList(); lastRoute = 0
             routeDistanceM = null; routeDurationS = null
+            navigationZoom = null
         }
         if (sim != null) {
             routePoints = if (sim.engine.stage == SimulationStage.COMPLETE) emptyList()
