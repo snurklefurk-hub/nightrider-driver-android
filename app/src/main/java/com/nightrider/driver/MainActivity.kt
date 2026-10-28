@@ -89,6 +89,8 @@ class MainActivity : Activity() {
     private var selectedChatRide = ""
     private var chatPendingSignature = ""
     private var chatPendingId = ""
+    private var chatInitialHistoryLoaded = false
+    private val unreadChat = mutableMapOf("team" to 0, "dispatch" to 0, "rider" to 0)
     private var shownName = ""
     private var stage = "available"
     private var running = false
@@ -259,6 +261,8 @@ class MainActivity : Activity() {
                 selectedChatRide = ""
                 chatPendingSignature = ""
                 chatPendingId = ""
+                chatInitialHistoryLoaded = false
+                unreadChat.keys.toList().forEach { unreadChat[it] = 0 }
                 chatMode = "team"
                 chatNeedsHistory = false
                 updateChatControls()
@@ -828,8 +832,9 @@ class MainActivity : Activity() {
     // Chat updates only add content inside a fixed scroll region. They never
     // navigate, open a modal, raise the keyboard, or scroll the driver's view.
     private fun chooseChatMode(mode: String) {
-        if (mode == chatMode) return
+        if (mode !in listOf("team", "dispatch", "rider")) return
         chatMode = mode
+        unreadChat[mode] = 0
         updateChatControls()
         renderChatHistory(true) // Explicit tap: permitted to show latest messages.
     }
@@ -850,12 +855,19 @@ class MainActivity : Activity() {
         refreshChat(true)
     }
 
-    private fun updateChatControls() {
+    private fun updateChatBadges() {
         listOf(chatTabTeam to "team", chatTabDispatch to "dispatch", chatTabRider to "rider")
             .forEach { (tab, mode) ->
+                val count = unreadChat[mode] ?: 0
+                val label = mode.replaceFirstChar { it.uppercase() }
+                tab.text = if (count > 0) "$label ${minOf(count, 99)}" else label
                 tab.isSelected = chatMode == mode
                 tab.alpha = if (chatMode == mode) 1.0f else 0.65f
             }
+    }
+
+    private fun updateChatControls() {
+        updateChatBadges()
         chatRecipientSummary.text = when (chatMode) {
             "dispatch" -> "Private to Dispatch"
             "rider" -> "Rider + Dispatch"
@@ -919,11 +931,17 @@ class MainActivity : Activity() {
                     received.forEach { message ->
                         val key = chatKey(message)
                         chatSeen = maxOf(chatSeen, message.optDouble("at", 0.0))
-                        if (chatMessages.putIfAbsent(key, message) == null &&
-                            matchesChat(message) && renderedChatKeys.add(key)) {
-                            addChatBubble(message)
+                        if (chatMessages.putIfAbsent(key, message) == null) {
+                            if (chatInitialHistoryLoaded && !message.optBoolean("mine")) {
+                                val tab = if (message.has("ride_id")) "rider" else
+                                    if (message.optString("channel") == "private") "dispatch" else "team"
+                                unreadChat[tab] = (unreadChat[tab] ?: 0) + 1
+                            }
+                            if (matchesChat(message) && renderedChatKeys.add(key)) addChatBubble(message)
                         }
                     }
+                    chatInitialHistoryLoaded = true
+                    updateChatBadges()
                     // No fullScroll here: arriving texts must never move the view.
                 }
             } catch (ignored: Exception) {
@@ -995,6 +1013,8 @@ class MainActivity : Activity() {
             chatSending.set(false)
             return
         }
+        val originalMode = chatMode
+        val originalRide = selectedChatRide
         val body = JSONObject().put("text", text)
         if (chatMode == "rider") {
             body.put("ride_id", selectedChatRide)
@@ -1013,7 +1033,7 @@ class MainActivity : Activity() {
             try {
                 Api.post("/api/chat/messages", body)
                 main.post {
-                    chatText.setText("")
+                    if (chatText.text.toString().trim() == text) chatText.setText("")
                     chatPendingSignature = ""
                     chatPendingId = ""
                     chatSendStatus.text = "Sent"
