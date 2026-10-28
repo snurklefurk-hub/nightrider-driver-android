@@ -8,7 +8,7 @@ SRC = ROOT / "app/src/main/java/com/nightrider/driver"
 
 class FieldModeChecks(unittest.TestCase):
     def test_panel_has_no_network_or_dispatch_api(self):
-        source = (SRC / "FieldTestPanel.kt").read_text()
+        source = (SRC / "FieldTestPanel.kt").read_text(encoding="utf-8")
         for unsafe in ("Api.", "HttpURLConnection", "LocationManager",
                        "requestLocationUpdates", "/api/", "sessionToken"):
             self.assertNotIn(unsafe, source)
@@ -18,7 +18,7 @@ class FieldModeChecks(unittest.TestCase):
         self.assertIn("trace.csv()", source)
 
     def test_field_screen_bypasses_live_ride_refresh(self):
-        source = (SRC / "DriverMapActivity.kt").read_text()
+        source = (SRC / "DriverMapActivity.kt").read_text(encoding="utf-8")
         self.assertIn('intent.getBooleanExtra("field_test", false)', source)
         self.assertIn("fieldTest != null -> {", source)
         self.assertIn("main.post(fieldRefresh)", source)
@@ -29,9 +29,9 @@ class FieldModeChecks(unittest.TestCase):
             "simulation != null -> simulation!!.resume()", "if (simulation != null) simulation!!.resume()"))
 
     def test_raw_trace_survives_rejected_navigation_fix(self):
-        activity = (SRC / "DriverMapActivity.kt").read_text()
-        panel = (SRC / "FieldTestPanel.kt").read_text()
-        quality = (SRC / "NavigationFixFilter.kt").read_text()
+        activity = (SRC / "DriverMapActivity.kt").read_text(encoding="utf-8")
+        panel = (SRC / "FieldTestPanel.kt").read_text(encoding="utf-8")
+        quality = (SRC / "NavigationFixFilter.kt").read_text(encoding="utf-8")
         self.assertIn("fieldTest?.onFix(value)", activity)
         self.assertIn("fieldTest?.onMapDecision(value.time, false)", activity)
         self.assertIn("fieldTest?.onMapDecision(value.time, true)", activity)
@@ -45,10 +45,10 @@ class FieldModeChecks(unittest.TestCase):
         self.assertNotIn("HttpURLConnection", quality)
 
     def test_motion_fusion_is_opt_in_and_isolated_from_live_rides(self):
-        activity = (SRC / "DriverMapActivity.kt").read_text()
-        panel = (SRC / "FieldTestPanel.kt").read_text()
-        adapter = (SRC / "FieldMotionSensors.kt").read_text()
-        fusion = (SRC / "FieldMotionFusion.kt").read_text()
+        activity = (SRC / "DriverMapActivity.kt").read_text(encoding="utf-8")
+        panel = (SRC / "FieldTestPanel.kt").read_text(encoding="utf-8")
+        adapter = (SRC / "FieldMotionSensors.kt").read_text(encoding="utf-8")
+        fusion = (SRC / "FieldMotionFusion.kt").read_text(encoding="utf-8")
         self.assertIn("fieldMotionSensors = FieldMotionSensors(this)", activity)
         self.assertIn("motionChanged: (Boolean) -> Boolean", panel)
         self.assertIn("Motion fusion: OFF", panel)
@@ -67,10 +67,10 @@ class FieldModeChecks(unittest.TestCase):
             self.assertNotIn(unsafe, fusion)
 
     def test_screen_video_requires_fresh_consent_and_foreground_service(self):
-        activity = (SRC / "DriverMapActivity.kt").read_text()
-        panel = (SRC / "FieldTestPanel.kt").read_text()
-        recorder = (SRC / "FieldScreenRecorderService.kt").read_text()
-        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
+        activity = (SRC / "DriverMapActivity.kt").read_text(encoding="utf-8")
+        panel = (SRC / "FieldTestPanel.kt").read_text(encoding="utf-8")
+        recorder = (SRC / "FieldScreenRecorderService.kt").read_text(encoding="utf-8")
+        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
 
         self.assertIn("MediaProjectionManager", activity)
         self.assertIn("createScreenCaptureIntent()", activity)
@@ -107,8 +107,8 @@ class FieldModeChecks(unittest.TestCase):
         self.assertIn('android:exported="false"', manifest)
 
     def test_settings_exposes_opt_in_field_test(self):
-        settings = (SRC / "SettingsActivity.kt").read_text()
-        layout = (ROOT / "app/src/main/res/layout/activity_settings.xml").read_text()
+        settings = (SRC / "SettingsActivity.kt").read_text(encoding="utf-8")
+        layout = (ROOT / "app/src/main/res/layout/activity_settings.xml").read_text(encoding="utf-8")
         self.assertIn('putExtra("field_test", true)', settings)
         self.assertIn('@+id/mapFieldTest', layout)
 

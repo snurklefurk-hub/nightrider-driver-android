@@ -12,7 +12,7 @@ class SimulationFixtureTests(unittest.TestCase):
         names = ("savannah", "bridge", "hilton-head")
         for name in names:
             with self.subTest(name=name):
-                data = json.loads((ROOT / "app/src/main/assets/simulation" / (name + ".json")).read_text())
+                data = json.loads((ROOT / "app/src/main/assets/simulation" / (name + ".json")).read_text(encoding="utf-8"))
                 self.assertEqual(len(data["legs"]), 2)
                 approach, trip = data["legs"]
                 self.assertEqual(approach[-1], trip[0], "Pickup must join both legs")
@@ -28,7 +28,7 @@ class SimulationFixtureTests(unittest.TestCase):
                                                   (a[1] - b[1]) * 94000), 1000)
 
     def test_simulation_screen_cannot_load_live_inputs(self):
-        source = (ROOT / "app/src/main/java/com/nightrider/driver/MapSimulationPanel.kt").read_text()
+        source = (ROOT / "app/src/main/java/com/nightrider/driver/MapSimulationPanel.kt").read_text(encoding="utf-8")
         for forbidden in ("Api.", "LocationManager", "requestLocationUpdates", "HttpURLConnection", "URL("):
             self.assertNotIn(forbidden, source)
 

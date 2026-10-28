@@ -18,7 +18,7 @@ import java.util.Locale
 /**
  * Deliberately isolated field-testing controls. No NightRider account,
  * dispatch, ride or driver ping APIs are used here. Trace data stays in memory
- * until the tester explicitly taps Share CSV, and is lost when the screen closes.
+ * until the tester explicitly saves or shares CSV, and is lost when the screen closes.
  */
 class FieldTestPanel(
     private val activity: Activity,
