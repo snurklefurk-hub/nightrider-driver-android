@@ -183,6 +183,7 @@ class DriverMapActivity : Activity(), LocationListener {
             FieldScreenRecorderService.REQUEST_CAPTURE -> {
                 if (resultCode == RESULT_OK && data != null && fieldTest != null) {
                     val id = "nightrider-field-" + System.currentTimeMillis()
+                    fieldTest?.screenCaptureAuthorized(id)
                     val service = android.content.Intent(
                         this, FieldScreenRecorderService::class.java)
                         .setAction(FieldScreenRecorderService.ACTION_START)
