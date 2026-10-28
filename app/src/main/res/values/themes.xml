@@ -2,6 +2,8 @@
 <resources>
 
     <style name="Theme.NightRider" parent="android:Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:buttonStyle">@style/NrButton</item>
         <item name="android:colorPrimary">@color/cyan</item>
         <item name="android:colorPrimaryDark">@color/void_night</item>
         <item name="android:colorAccent">@color/cyan</item>

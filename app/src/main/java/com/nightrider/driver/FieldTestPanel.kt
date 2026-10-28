@@ -65,12 +65,12 @@ class FieldTestPanel(
         panel.addView(TextView(activity).apply {
             text = "FIELD TEST · Real GPS · No ride/dispatch changes"
             textSize = 13f
-            setTextColor(Color.rgb(213, 135, 32))
+            setTextColor(activity.appearanceColor(R.attr.nrAccent))
         })
         panel.addView(TextView(activity).apply {
             text = "Stop safely before interacting. Long-press the map to set a test destination."
             textSize = 12f
-            setTextColor(Color.GRAY)
+            setTextColor(activity.appearanceColor(R.attr.nrMuted))
         })
         syncLabel.apply {
             textSize = 13f
