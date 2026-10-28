@@ -80,6 +80,7 @@ class MainActivity : Activity() {
     private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
+    @Volatile private var chatNeedsHistory = false
     private var chatMode = "team"
     private val chatMessages = LinkedHashMap<String, JSONObject>()
     private val renderedChatKeys = HashSet<String>()
@@ -259,6 +260,7 @@ class MainActivity : Activity() {
                 chatPendingSignature = ""
                 chatPendingId = ""
                 chatMode = "team"
+                chatNeedsHistory = false
                 updateChatControls()
                 ridesSignature = ""
                 chatContent.removeAllViews()
@@ -842,7 +844,7 @@ class MainActivity : Activity() {
         assignedRideNames = labels
         selectedChatRide = if (previous in ids) previous else ids.firstOrNull() ?: ""
         updateChatControls()
-        if (previous != selectedChatRide) renderChatHistory(false)
+        if (previous != selectedChatRide && chatMode == "rider") renderChatHistory(false)
         // A driver assigned to an existing ride needs messages older than their
         // latest team-message timestamp. Always merge the full server history.
         refreshChat(true)
@@ -898,7 +900,11 @@ class MainActivity : Activity() {
 
     private fun refreshChat(full: Boolean = false) {
         val name = prefs.driverName
-        if (name.isBlank() || !chatBusy.compareAndSet(false, true)) return
+        if (name.isBlank()) return
+        if (!chatBusy.compareAndSet(false, true)) {
+            if (full) chatNeedsHistory = true
+            return
+        }
         val since = if (full) 0.0 else (chatSeen - 0.05).coerceAtLeast(0.0)
         io.execute {
             try {
@@ -924,6 +930,10 @@ class MainActivity : Activity() {
                 // The message remains in its compose field on send failure.
             } finally {
                 chatBusy.set(false)
+                if (chatNeedsHistory) {
+                    chatNeedsHistory = false
+                    main.post { refreshChat(true) }
+                }
             }
         }
     }
