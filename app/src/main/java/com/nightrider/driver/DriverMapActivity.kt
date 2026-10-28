@@ -232,7 +232,10 @@ class DriverMapActivity : Activity(), LocationListener {
         main.removeCallbacks(screenVideoMonitor)
         // Match foreground GPS collection to the screen-video lifetime.
         // The Android consent dialog pauses us BEFORE video has started.
-        if (fieldTest?.isVideoRunning() == true)
+        if (fieldTest != null &&
+            (fieldTest?.isVideoRunning() == true ||
+                FieldScreenRecorderService.state.phase ==
+                FieldScreenRecorderService.Phase.RECORDING))
             FieldScreenRecorderService.requestStop(this)
         fieldMotionSensors?.stop()
         main.removeCallbacks(motionFrames)
@@ -297,7 +300,11 @@ class DriverMapActivity : Activity(), LocationListener {
                 val output = contentResolver.openOutputStream(uri)
                     ?: throw IllegalStateException("Could not open destination")
                 source.inputStream().use { input -> output.use { input.copyTo(it) } }
+                // Export succeeded. Keep only the user's chosen copy rather
+                // than accumulating private route footage inside the app.
+                source.delete()
                 runOnUiThread {
+                    fieldTest?.videoExported()
                     android.widget.Toast.makeText(this, "Screen MP4 saved.",
                         android.widget.Toast.LENGTH_LONG).show()
                 }
