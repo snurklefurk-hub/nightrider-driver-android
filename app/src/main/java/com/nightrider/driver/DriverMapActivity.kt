@@ -172,6 +172,19 @@ class DriverMapActivity : Activity(), LocationListener {
     override fun onDestroy() { simulation?.destroy(); main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
     override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); simulation?.save(state); mapView.onSaveInstanceState(state) }
 
+    private fun navigationFix(value: Location): NavigationFix = NavigationFix(
+        value.latitude, value.longitude, value.time,
+        if (value.hasAccuracy()) value.accuracy.toDouble() else null,
+        if (value.hasSpeed()) value.speed.toDouble() else null,
+        value.provider ?: ""
+    )
+
+    private fun acceptsMapFix(value: Location): Boolean =
+        NavigationFixFilter.accepts(
+            navigationFix(value), location?.let { navigationFix(it) },
+            System.currentTimeMillis()
+        )
+
     private fun startLocation() {
         if (simulation != null) return
         val fine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -188,7 +201,9 @@ class DriverMapActivity : Activity(), LocationListener {
         try {
             for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
                 if (manager.isProviderEnabled(provider)) {
-                    manager.getLastKnownLocation(provider)?.let { if (location == null || it.time > location!!.time) location = it }
+                    manager.getLastKnownLocation(provider)?.let { fix ->
+                        if (acceptsMapFix(fix)) location = Location(fix)
+                    }
                     manager.requestLocationUpdates(provider, 5000L, 10f, this)
                 }
             }
@@ -196,8 +211,14 @@ class DriverMapActivity : Activity(), LocationListener {
         updateMap()
     }
     override fun onLocationChanged(value: Location) {
-        location = Location(value)
+        // Always retain the raw reading for Field Test CSV diagnosis, even if
+        // the navigation arrow and camera must ignore this unreliable fix.
         fieldTest?.onFix(value)
+        if (!acceptsMapFix(value)) {
+            fieldTest?.onFilteredMapFix()
+            return
+        }
+        location = Location(value)
         updateMap()
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -232,7 +253,9 @@ class DriverMapActivity : Activity(), LocationListener {
         val lat = value.optDouble(0, Double.NaN); val lon = value.optDouble(1, Double.NaN)
         return if (lat.isFinite() && lon.isFinite() && lat in -90.0..90.0 && lon in -180.0..180.0) LatLng(lat, lon) else null
     }
-    private fun driverPoint(): LatLng? = location?.takeIf { System.currentTimeMillis() - it.time < 120000 }?.let { LatLng(it.latitude, it.longitude) }
+    private fun driverPoint(): LatLng? = location?.takeIf {
+        System.currentTimeMillis() - it.time < if (fieldTest != null) 20_000L else 120_000L
+    }?.let { LatLng(it.latitude, it.longitude) }
     private fun centerMap() {
         navigationFollow = true
         fieldTest?.setFollow(true)
