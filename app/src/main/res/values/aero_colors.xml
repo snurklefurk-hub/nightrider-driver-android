@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="aero_sky">#B5E7FA</color>
-    <color name="aero_pale">#EDF9FF</color>
+    <color name="aero_pale">#E8F8FF</color>
     <color name="aero_blue">#0876B8</color>
-    <color name="aero_green">#137F50</color>
-    <color name="aero_ink">#123D57</color>
-    <color name="aero_muted">#416579</color>
+    <color name="aero_green">#168957</color>
+    <color name="aero_ink">#103D58</color>
+    <color name="aero_muted">#3E6075</color>
     <color name="aero_danger">#B83B45</color>
     <color name="aero_nav">#DFF6FF</color>
     <color name="aero_status">#72B7D8</color>

@@ -1,7 +1,6 @@
 package com.nightrider.driver
 
 import android.app.Activity
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -23,13 +22,14 @@ class NavigationHud(
     onBack: () -> Unit,
     onRecenter: () -> Unit
 ) {
-    private val banner = if (light) Color.rgb(0, 113, 108) else Color.rgb(36, 37, 41)
-    private val bottom = if (light) Color.rgb(238, 250, 255) else Color.rgb(26, 27, 31)
-    private val bottomText = if (light) Color.rgb(23, 48, 64) else Color.WHITE
-    private val secondary = if (light) Color.rgb(70, 98, 113) else Color.rgb(182, 193, 201)
+    private val banner = activity.appearanceColor(R.attr.nrTopbar)
+    private val bottom = if (light) activity.getColor(R.color.aero_pale) else activity.getColor(R.color.panel)
+    private val bottomText = activity.appearanceColor(R.attr.nrText)
+    private val secondary = activity.appearanceColor(R.attr.nrMuted)
+    private val accent = activity.appearanceColor(R.attr.nrAccent)
     val view = FrameLayout(activity)
-    private val heading = text("", 27f, Color.WHITE, true)
-    private val detail = text("", 13f, Color.WHITE, false)
+    private val heading = text("", 27f, bottomText, true)
+    private val detail = text("", 13f, bottomText, false)
     private val summary = text("", 27f, bottomText, true)
     private val speed = text("", 16f, bottomText, true)
     val status = text("", 12f, secondary, false)
@@ -43,7 +43,7 @@ class NavigationHud(
             elevation = dp(4).toFloat()
         }
         top.addView(button("‹", onBack, true), LinearLayout.LayoutParams(dp(38), dp(64)))
-        top.addView(text("▲", 35f, Color.WHITE, true).apply { gravity = Gravity.CENTER },
+        top.addView(text("▲", 35f, bottomText, true).apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(dp(42), dp(64)))
         val textColumn = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         textColumn.addView(heading)
@@ -79,6 +79,7 @@ class NavigationHud(
     private fun dp(v: Int) = (v * activity.resources.displayMetrics.density + 0.5f).toInt()
     private fun shape(color: Int, radius: Float) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius.toInt()).toFloat()
+        setStroke(dp(1), accent)
     }
     private fun text(value: String, size: Float, color: Int, strong: Boolean) = TextView(activity).apply {
         text = value; textSize = size; setTextColor(color)
@@ -88,8 +89,8 @@ class NavigationHud(
     private fun button(label: String, action: () -> Unit, top: Boolean) = Button(activity).apply {
         text = label; textSize = 25f; isAllCaps = false; minWidth = 0; minimumWidth = 0
         setPadding(0, 0, 0, 0)
-        setTextColor(if (top) Color.WHITE else bottomText)
-        background = shape(if (top) banner else if (bottom == Color.rgb(26,27,31)) Color.rgb(49,52,58) else Color.rgb(214,232,241), 12f)
+        setTextColor(if (top) bottomText else bottomText)
+        background = shape(banner, 12f)
         setOnClickListener { action() }
         contentDescription = if (top) "Back" else "Recenter navigation map"
     }

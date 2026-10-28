@@ -1,7 +1,6 @@
 package com.nightrider.driver
 
 import android.app.Activity
-import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
@@ -55,7 +54,7 @@ class MapSimulationPanel(private val activity: Activity, saved: Bundle?, private
         val panel = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), 0, dp(8), dp(4)) }
         panel.addView(TextView(activity).apply {
             text = "SIMULATION · Sample rides only"
-            textSize = 13f; setTextColor(Color.rgb(218, 143, 33)); setPadding(0, dp(4), 0, dp(4))
+            textSize = 13f; setTextColor(activity.appearanceColor(R.attr.nrAccent)); setPadding(0, dp(4), 0, dp(4))
         })
         val spinner = Spinner(activity).apply {
             adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, labels)
