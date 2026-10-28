@@ -155,8 +155,9 @@ class FieldScreenRecorderService : Service() {
             // The previous session is preserved until a new session starts.
             output = candidate
             if (candidate.exists()) candidate.delete()
+            @Suppress("DEPRECATION")
             val encoder = if (Build.VERSION.SDK_INT >= 31) MediaRecorder(this)
-                else @Suppress("DEPRECATION") MediaRecorder()
+                else MediaRecorder()
             recorder = encoder
             encoder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
             encoder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
