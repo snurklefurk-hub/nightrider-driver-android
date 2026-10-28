@@ -43,12 +43,12 @@ NR-Override: MAKE IT SO - Add the specifically requested experimental driver set
 1. Read this file and `README.md`, then check both [Android PRs](https://github.com/snurklefurk-hub/nightrider-driver-android/pulls) and [web/backend PRs](https://github.com/snurklefurk-hub/NightRider/pulls), plus recent commits in both `main` branches.
 2. Work on a task-specific branch cut from current `main`; announce your work immediately with a **draft PR**, even if code is not complete. List expected changed files and related PRs in the template.
 3. Check for overlap in Android code, shared assets, navigation, messaging and server API contracts. When another PR overlaps, read its diff and leave comments / link your PR. Do not silently overwrite another agent.
-4. Update the PR with tests, compatibility implications and deployment order. Mark ready only when checks pass. Do not merge unless designated as integration owner.
+4. Update the PR with tests, compatibility implications and deployment order. Mark ready only when checks pass. The implementing agent may merge after required checks and coordination.
 5. Read the automatic **NightRider agent coordination** bot report in the PR. It lists other open PRs in BOTH repositories and warns if two PRs edit the same files in this repo. A clean report cannot rule out semantic/API conflicts.
 
 ## Release and integration safety
 
-- **No direct commits or force pushes to `main`. No unattended auto-merges.** The product owner assigned **CHAT NR** the authority to prepare, approve and merge **low-risk maintenance PRs** after checks. **WORK NR** owns major functionality, cross-system integration and releases. See the explicit division below.
+- **No direct commits or force pushes to `main`. No unattended auto-merges.** Either CHAT NR or WORK NR can implement and merge authorized work after checks; choose mode by capability rather than seniority.
 - **A push to Android `main` can trigger a signed production/pilot APK release.** A web/backend merge can redeploy Render. Do not merge changes casually just to update documentation.
 - Do not bypass a tool/provider safety block through a different write mechanism.
 - Android API assumptions must match current `NightRider/server.py`; if an API contract changes, link the companion PR and identify backward-compatible rollout order.
