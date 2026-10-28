@@ -35,24 +35,48 @@ password, contact dispatch; they can reset it after verifying your identity.
 
 ## Appearance: LIGHT / DARK
 
-Under **Settings → Appearance**, choose **LIGHT** (Frutiger Aero glass,
+Use the single button at the top right of **Settings** to switch to **LIGHT** (Frutiger Aero glass,
 sky blue/green controls and rounded humanist type) or **DARK** (the original
 NightRider Verdant styling). DARK remains the default and the choice persists
 on this device without changing the signed-in session or ride state.
 
-The separate **Map Preview** test app provides the same two combined options.
-LIGHT selects the NightRider Midnight vector map; DARK selects OpenFreeMap
-Original Dark. There is no longer a separate map style switch. The production
-Driver currently has no embedded map.
+The embedded driver map, simulator and GPS Field Test follow this setting,
+with a road-contrast palette tuned for the driver view. There is no separate
+map style switch. The standalone **Map Preview** test app has its own local
+setting: LIGHT selects NightRider Midnight and DARK selects OpenFreeMap
+Original Dark.
+
+## Driver map and testing
+
+Open the driver map from the main board to see your position, ride endpoints
+and an estimated route. The map includes a flat heading-up camera, SmartZoom,
+GPS quality filtering and motion smoothing. It does not provide turn-by-turn
+guidance or automatic rerouting.
+
+**Settings → Map simulator** replays bundled Savannah, Talmadge Bridge and
+Hilton Head sample journeys without using real GPS or changing rides.
+**Settings → Field test (live GPS)** tests the same map with actual location,
+local CSV export, optional motion fusion and explicitly consented screen
+video recording without audio. See [MAP-SIMULATOR.md](MAP-SIMULATOR.md) for
+controls, recording and trace review in the website's Map Lab.
 
 ## Build from source
 
-Both Android workflows install Java 17 and Gradle 8.7. Android Studio is
-optional. The production driver module uses only the Android framework; the
-separate `nav-prototype/` Map Lab uses MapLibre for visual experiments.
+The Android workflows install Java 17 and Gradle 8.7. Android Studio is
+optional. Both the production driver module and the separate `nav-prototype/`
+appearance preview use the pinned MapLibre Android SDK.
+
+Run `python -m unittest discover -s tests -p 'test_*.py' -v` for source/package
+checks and `gradle testDebugUnitTest assembleDebug` for the Kotlin unit tests
+and development APK. The signed-release workflow also runs the source and
+Kotlin checks before building an update.
 
 ## Permissions
 
-The app uses internet access, network state, optional location access, and a
-keep-screen-on setting. It does not request contacts, camera, or files.
+The app uses internet access, network state, optional location access, a
+keep-screen-on setting and Android's package installer for approved updates.
+Field Test screen recording requests Android's screen-capture consent for
+each session and runs a visible foreground service. CSV/MP4 exports use
+Android's file picker. No microphone, camera, contacts or broad storage
+permissions are requested.
 
