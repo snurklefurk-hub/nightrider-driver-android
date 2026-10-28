@@ -153,3 +153,39 @@ The test route and live dispatch behavior are otherwise unchanged. To validate
 on a second road test, compare the new ignored-fix count with the raw CSV and
 watch whether the arrow avoids sudden jumps; perform any interactions only while
 parked or with a passenger operating the test.
+
+
+## Follow-camera motion smoothing (second real-world trace)
+
+The second Field Test trace contained mostly valid highway-speed GPS fixes
+roughly five seconds apart. The earlier quality gate rejected obviously bad
+readings, but the driver arrow still jumped up to around 120 meters on each
+*valid* fix. Redrawing a marker only on arrival of each GPS fix makes motion
+look discontinuous even when position quality is good.
+
+The driver map and isolated Field Test now use a **display-only** position
+smoother. When a valid GPS fix arrives, the blue arrow advances gradually
+from its current rendered location to that accepted fix; the flat follow
+camera tracks the same interpolated position and rotates through the shortest
+heading change. Smooth display frames run only while the screen is active;
+the simulator retains its own deterministic map movement.
+
+The animation scales to the recent fix interval, capped at 3.6 seconds.
+There is **no speculative motion beyond the most recent GPS fix**. This can
+make the displayed arrow lag actual motion by several seconds at highway
+speeds. After a long GPS outage or a large discontinuity it snaps to the
+new *accepted* fix rather than concealing an uncertain recovery. These are
+visual-preview behavior choices, not a production navigation guarantee.
+
+Crucially, routing, Field Test route-offset checks, and CSV recording
+continue to use their existing original positions. The native marker is
+updated in place during animation instead of being recreated on each
+animation frame. Pan-to-disable-follow, Recenter, 2D-only rendering,
+LIGHT/DARK appearance, no-audio, and simulation isolation remain unchanged.
+
+**Road test**: Install the next signed update. In a parked/passenger-observed
+Field Test, verify that the arrow flows rather than hopping at approximately
+five-second intervals and that heading changes stay controlled. Use
+Recenter and manual pan while parked. Export a new raw CSV, and report
+whether the movement feels smoother without noticeably lagging the car.
+Never depend on this preview for safety-critical turn instructions.
