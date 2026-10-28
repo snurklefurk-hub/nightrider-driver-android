@@ -24,7 +24,9 @@ class FieldTestPanel(
     private val activity: Activity,
     private val changed: () -> Unit,
     private val routeRequested: () -> Unit,
-    private val motionChanged: (Boolean) -> Boolean
+    private val motionChanged: (Boolean) -> Boolean,
+    private val screenAction: (Boolean) -> Unit,
+    private val saveScreenVideo: () -> Unit
 ) {
     val trace = FieldTrace()
     var destination: LatLng? = null
@@ -36,6 +38,15 @@ class FieldTestPanel(
     private var motionAvailability = "Checking motion sensors…"
     private var motionSnapshot: FieldMotionSnapshot? = null
     private val motionButton = Button(activity)
+    private val screenButton = Button(activity)
+    private val saveVideoButton = Button(activity)
+    private var videoPending = false
+    private var videoRecording = false
+    private var videoStopping = false
+    private var videoReady = false
+    private var videoSessionId = ""
+    private var videoStartedMs = 0L
+    private var videoMessage = ""
     private var latest: Location? = null
     private var filteredMapFixes = 0
     private val recordButton = Button(activity)
@@ -61,8 +72,11 @@ class FieldTestPanel(
             setTextColor(Color.GRAY)
         })
         recordButton.setOnClickListener {
+            if (videoPending || videoRecording || videoStopping) return@setOnClickListener
             if (trace.recording) trace.stop() else {
                 trace.start()
+                videoSessionId = ""
+                videoReady = false
                 filteredMapFixes = 0
             }
             render(); changed()
@@ -72,6 +86,22 @@ class FieldTestPanel(
             motionEnabled = motionChanged(!motionEnabled)
             render()
         }
+        screenButton.setOnClickListener {
+            if (videoRecording) {
+                videoStopping = true
+                trace.stop()
+                videoMessage = "Finishing MP4…"
+                screenAction(false)
+                render()
+            } else if (!videoPending && !videoStopping) {
+                videoPending = true
+                videoReady = false
+                videoMessage = "Waiting for Android screen-capture permission…"
+                render()
+                screenAction(true)
+            }
+        }
+        saveVideoButton.setOnClickListener { if (videoReady) saveScreenVideo() }
         val routeButton = Button(activity).apply {
             text = "Route again"
             setOnClickListener { if (destination != null) routeRequested() }
@@ -87,7 +117,10 @@ class FieldTestPanel(
         val clearTraceButton = Button(activity).apply {
             text = "Clear trace"
             setOnClickListener {
+                if (videoRecording || videoPending || videoStopping) return@setOnClickListener
                 trace.clear()
+                videoSessionId = ""
+                videoReady = false
                 filteredMapFixes = 0
                 render()
                 changed()
@@ -95,13 +128,14 @@ class FieldTestPanel(
         }
         panel.addView(row(recordButton, followButton))
         panel.addView(row(motionButton))
+        panel.addView(row(screenButton, saveVideoButton))
         panel.addView(row(routeButton, clearButton))
         panel.addView(row(saveButton, shareButton, clearTraceButton))
         diagnostics.textSize = 12f
         panel.addView(diagnostics)
         view = ScrollView(activity).apply {
             addView(panel)
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(255))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(310))
         }
         render()
     }
@@ -158,6 +192,60 @@ class FieldTestPanel(
         render()
     }
 
+    /** Keep the GPS session tied to the exact MediaRecorder session identity. */
+    fun updateVideoState(state: FieldScreenRecorderService.RecordingState) {
+        when (state.phase) {
+            FieldScreenRecorderService.Phase.RECORDING -> {
+                if (!videoRecording && (videoPending || videoSessionId == state.sessionId)) {
+                    videoPending = false
+                    videoStopping = false
+                    videoRecording = true
+                    videoReady = false
+                    videoSessionId = state.sessionId
+                    videoStartedMs = state.startedEpochMs
+                    videoMessage = "Screen + GPS running (no audio)"
+                    trace.start()
+                    filteredMapFixes = 0
+                }
+            }
+            FieldScreenRecorderService.Phase.READY -> {
+                if ((videoRecording || videoStopping || videoPending) &&
+                    videoSessionId == state.sessionId) {
+                    videoRecording = false
+                    videoStopping = false
+                    videoPending = false
+                    videoReady = true
+                    trace.stop()
+                    videoMessage = "MP4 ready. Save video and CSV separately."
+                }
+            }
+            FieldScreenRecorderService.Phase.ERROR -> {
+                if (videoPending || videoRecording || videoStopping) {
+                    videoRecording = false
+                    videoStopping = false
+                    videoPending = false
+                    trace.stop()
+                    videoMessage = state.message
+                }
+            }
+            else -> Unit
+        }
+        render()
+    }
+
+    fun screenCaptureCancelled() {
+        videoPending = false
+        videoMessage = "Android screen capture was cancelled."
+        render()
+    }
+
+    fun isVideoRunning(): Boolean = videoRecording
+
+    fun isVideoReady(): Boolean = videoReady
+
+    fun filenameBase(): String = videoSessionId.takeIf { it.isNotBlank() }
+        ?: "nightrider-field-trace"
+
     fun refreshDiagnostics() = render()
 
     fun pause() {
@@ -168,11 +256,21 @@ class FieldTestPanel(
 
     private fun render() {
         recordButton.text = if (trace.recording) "Stop recording" else "Record new trace"
+        recordButton.isEnabled = !videoRecording && !videoPending && !videoStopping
+        screenButton.text = when {
+            videoRecording -> "Stop screen + GPS"
+            videoPending -> "Awaiting consent…"
+            videoStopping -> "Finishing video…"
+            else -> "Record screen + GPS"
+        }
+        screenButton.isEnabled = !videoPending && !videoStopping
+        saveVideoButton.text = "Save MP4"
+        saveVideoButton.isEnabled = videoReady
         followButton.text = if (follow) "Follow: ON" else "Follow: OFF"
         motionButton.text = if (motionEnabled) "Motion fusion: ON · experimental"
             else "Motion fusion: OFF · tap when parked"
-        shareButton.isEnabled = trace.samples.isNotEmpty()
-        saveButton.isEnabled = trace.samples.isNotEmpty()
+        shareButton.isEnabled = trace.samples.isNotEmpty() && !videoRecording
+        saveButton.isEnabled = trace.samples.isNotEmpty() && !videoRecording
         val fix = latest
         val age = fix?.let { ((System.currentTimeMillis() - it.time) / 1000L).coerceAtLeast(0L) }
         val gps = when {
@@ -200,7 +298,13 @@ class FieldTestPanel(
             } ?: "") +
             (motionSnapshot?.linearAccelerationMps2?.let {
                 " · Motion " + String.format(Locale.US, "%.1f m/s²", it)
-            } ?: "")
+            } ?: "") +
+            "\nScreen video: " + (if (videoRecording) "● REC" else
+                if (videoPending || videoStopping) "Preparing" else
+                if (videoReady) "Ready" else "Off") +
+            (if (videoMessage.isBlank()) "" else " · " + videoMessage) +
+            (if (videoRecording) "\nSYNC epoch_ms: " + System.currentTimeMillis() +
+                " · video started: " + videoStartedMs else "")
     }
 
     private fun saveToFile() {
@@ -208,7 +312,7 @@ class FieldTestPanel(
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "text/csv"
-            putExtra(Intent.EXTRA_TITLE, "nightrider-field-trace.csv")
+            putExtra(Intent.EXTRA_TITLE, filenameBase() + ".csv")
         }
         // SAF asks the tester where to save. No storage permission required.
         activity.startActivityForResult(intent, EXPORT_CSV_REQUEST)
