@@ -29,12 +29,12 @@ class NavigationCameraMathTest {
     @Test fun sharpBendZoomsCloserWithoutClaimingTurnInstructions() {
         val path = listOf(
             SimulationPoint(32.0000, -81.0000),
-            SimulationPoint(32.0010, -81.0000),
-            SimulationPoint(32.0010, -80.9990)
+            SimulationPoint(32.0008, -81.0000),
+            SimulationPoint(32.0008, -80.9990)
         )
         val bend = NavigationCameraMath.nextBendMeters(path.first(), path)
         assertNotNull(bend)
-        assertTrue(bend!! > 100.0 && bend < 120.0)
+        assertTrue(bend!! > 80.0 && bend < 100.0)
         assertEquals(16.1, NavigationCameraMath.zoomForUpcomingBend(14.5, bend), 0.01)
         assertEquals(16.7, NavigationCameraMath.zoomForUpcomingBend(14.5, 30.0), 0.01)
         assertEquals(14.5, NavigationCameraMath.zoomForUpcomingBend(14.5, null), 0.01)
