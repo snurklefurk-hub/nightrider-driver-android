@@ -10,3 +10,5 @@ NightRider changes: Geo.kt omits its kotlinx.serialization import and @Serializa
 NightRider's adapter ignores speech and haptic requests. It executes only reroute/arrival state transitions; arrival never modifies a NightRider ride.
 
 Build: gradle :vela-engine:test :app:testDebugUnitTest :app:assembleDebug
+
+OsrmManeuvers.kt extracts osrmType and osrmPhrase from upstream core/data/RouteGeometry.kt. Method visibility is public and the enclosing object/package is adapted for this focused module; implementation bodies are unchanged.

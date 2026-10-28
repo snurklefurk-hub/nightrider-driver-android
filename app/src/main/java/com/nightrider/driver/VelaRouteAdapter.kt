@@ -1,6 +1,6 @@
 package com.nightrider.driver
 
-import app.vela.core.i18n.EnNavStrings
+import app.vela.core.nav.OsrmManeuvers
 import app.vela.core.model.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -34,8 +34,8 @@ object VelaRouteAdapter {
                     val lane = laneArray.getJSONObject(j); val indications = lane.getJSONArray("indications")
                     Lane((0 until indications.length()).map { indications.getString(it) }, lane.optBoolean("valid"))
                 }
-                Maneuver(maneuverType(type, mod),
-                    EnNavStrings.phrase(type, mod, road, step.optString("destinations").ifBlank { null },
+                Maneuver(OsrmManeuvers.osrmType(type, mod),
+                    OsrmManeuvers.osrmPhrase(type, mod, road, step.optString("destinations").ifBlank { null },
                         step.optString("exits").ifBlank { null }, m.optInt("exit").takeIf { it > 0 }),
                     point(m.getJSONArray("location")), step.getDouble("distance"), step.getDouble("duration"),
                     road = road, ref = step.optString("ref").ifBlank { null }, lanes = lanes,
@@ -48,21 +48,5 @@ object VelaRouteAdapter {
         require(distance.isFinite() && duration.isFinite() && distance >= 0 && duration >= 0)
         return Route(poly, converted, distance, duration, null, summary = "OSRM · no live traffic",
             source = RouteSource.OSRM)
-    }
-    private fun maneuverType(type: String, modifier: String?): ManeuverType = when (type) {
-        "depart" -> ManeuverType.DEPART
-        "arrive" -> ManeuverType.ARRIVE
-        "roundabout", "rotary", "roundabout turn" -> ManeuverType.ROUNDABOUT
-        "exit roundabout", "exit rotary" -> ManeuverType.EXIT_ROUNDABOUT
-        "merge" -> ManeuverType.MERGE
-        "fork" -> if (modifier?.contains("left") == true) ManeuverType.FORK_LEFT else ManeuverType.FORK_RIGHT
-        "on ramp", "off ramp" -> if (modifier?.contains("left") == true) ManeuverType.RAMP_LEFT else ManeuverType.RAMP_RIGHT
-        else -> when (modifier) {
-            "left" -> ManeuverType.TURN_LEFT; "right" -> ManeuverType.TURN_RIGHT
-            "slight left" -> ManeuverType.SLIGHT_LEFT; "slight right" -> ManeuverType.SLIGHT_RIGHT
-            "sharp left" -> ManeuverType.SHARP_LEFT; "sharp right" -> ManeuverType.SHARP_RIGHT
-            "uturn" -> ManeuverType.UTURN; "straight" -> ManeuverType.STRAIGHT
-            else -> ManeuverType.CONTINUE
-        }
     }
 }

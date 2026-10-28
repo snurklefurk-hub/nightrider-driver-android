@@ -59,4 +59,12 @@ class VelaIntegrationTest {
         val events=session.accept(fix(1000),1000)!!
         assertTrue(events.none { it is NavEvent.Speak || it is NavEvent.Haptic })
     }
+
+    @Test fun velaInstructionRulesPreserveUTurnsArrivalSideAndRoadRenames() {
+        val text = app.vela.core.nav.OsrmManeuvers
+        assertTrue(text.osrmPhrase("continue","uturn","Main Street",null,null,null).lowercase().contains("u-turn"))
+        assertTrue(text.osrmPhrase("arrive","left",null,null,null,null).lowercase().contains("left"))
+        assertEquals(app.vela.core.model.ManeuverType.CONTINUE, text.osrmType("new name","slight left"))
+        assertEquals(app.vela.core.model.ManeuverType.TURN_LEFT, text.osrmType("continue","left"))
+    }
 }
