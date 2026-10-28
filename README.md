@@ -9,6 +9,16 @@ driver accounts and gives each driver their sign-in details privately. The app
 stores only an encrypted session token in Android Keystore; it does not save the
 password. Riders and dispatch use the website.
 
+## Working with multiple AI agents
+
+NightRider's website/backend and Android app may be developed by independent AI agents at the same time. **Read [AGENTS.md](AGENTS.md) before changing code.** GitHub is the shared coordination hub; separate chat instances do not automatically share their plans or decisions.
+
+- **Current work (live):** [Web/backend pull requests](https://github.com/snurklefurk-hub/NightRider/pulls) · [Android pull requests](https://github.com/snurklefurk-hub/nightrider-driver-android/pulls).
+- **Announce work early:** Open a **draft pull request** on a dedicated branch so other agents can see scope, ownership and expected files.
+- **Automatic coordination:** `.github/workflows/agent-coordination.yml` checks new PRs immediately using read-only access, flags overlapping source files in the same repo, and posts/refreshes cross-repo status comments through a trusted scheduled run every four hours (or a manual workflow run). It warns about other work; human review is still needed for cross-repo API/design conflicts.
+- **Protected release process:** **WORK NR** is the default integration owner unless the product owner delegates it. Only that owner merges. A merge into web `main` may redeploy Render; a merge into Android `main` may publish a signed pilot APK. The bot **never** automatically merges or deploys anything.
+- **Important:** Check current PRs instead of trusting a static status summary. A green overlap report is not a guarantee of compatible behavior. All relevant tests must pass before integration.
+
 ## Get the driver app
 
 The **signed NightRider release** is the update channel for installed pilot
