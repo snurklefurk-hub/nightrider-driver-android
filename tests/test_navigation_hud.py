@@ -37,6 +37,22 @@ class NavigationHudChecks(unittest.TestCase):
             self.assertNotIn(unsafe, hud)
         self.assertIn("No turn guidance", (ROOT / "MAP-SIMULATOR.md").read_text())
 
+    def test_clarity_styling_is_isolated_from_rides(self):
+        source = (SRC / "DriverMapActivity.kt").read_text()
+        style = (SRC / "NavigationRoadStyle.kt").read_text()
+        camera = (SRC / "NavigationCameraMath.kt").read_text()
+        self.assertIn("NavigationRoadStyle.apply(style, prefs.aeroEnabled)", source)
+        self.assertIn("NavigationCameraMath.nextBendMeters", source)
+        self.assertIn("NavigationCameraMath.easeZoom", source)
+        self.assertIn('ready.setMaxPitchPreference(0.0)', source)
+        self.assertIn('"highway_motorway_inner"', style)
+        self.assertIn('"highway_major_casing"', style)
+        self.assertIn("textOpacity(0.12f)", style)
+        self.assertIn("fun nextBendMeters", camera)
+        for unsafe in ("Api.", "HttpURLConnection", "LocationManager",
+                       "AudioManager", "TextToSpeech", "/api/"):
+            self.assertNotIn(unsafe, style)
+
 
 if __name__ == "__main__":
     unittest.main()

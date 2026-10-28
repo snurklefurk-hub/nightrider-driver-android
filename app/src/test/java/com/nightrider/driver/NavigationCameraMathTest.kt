@@ -26,4 +26,35 @@ class NavigationCameraMathTest {
         assertEquals(point.lon, ahead.lon, 0.00001)
         assertTrue(SimulationLeg.meters(point, ahead) < 250.0)
     }
+    @Test fun sharpBendZoomsCloserWithoutClaimingTurnInstructions() {
+        val path = listOf(
+            SimulationPoint(32.0000, -81.0000),
+            SimulationPoint(32.0008, -81.0000),
+            SimulationPoint(32.0008, -80.9990)
+        )
+        val bend = NavigationCameraMath.nextBendMeters(path.first(), path)
+        assertNotNull(bend)
+        assertTrue(bend!! > 80.0 && bend < 100.0)
+        assertEquals(16.1, NavigationCameraMath.zoomForUpcomingBend(14.5, bend), 0.01)
+        assertEquals(16.7, NavigationCameraMath.zoomForUpcomingBend(14.5, 30.0), 0.01)
+        assertEquals(14.5, NavigationCameraMath.zoomForUpcomingBend(14.5, null), 0.01)
+    }
+
+    @Test fun gpsOffsetAndStraightRoadDoNotTriggerBendZoom() {
+        val path = listOf(
+            SimulationPoint(32.0000, -81.0000),
+            SimulationPoint(32.0010, -81.0000),
+            SimulationPoint(32.0020, -81.0000)
+        )
+        assertNull(NavigationCameraMath.nextBendMeters(path.first(), path))
+        assertNull(NavigationCameraMath.nextBendMeters(
+            SimulationPoint(33.0, -81.0), path
+        ))
+    }
+
+    @Test fun consecutiveCameraUpdatesHaveLimitedZoomJumps() {
+        assertEquals(15.0, NavigationCameraMath.easeZoom(null, 15.0), 0.01)
+        assertEquals(15.55, NavigationCameraMath.easeZoom(15.0, 17.0), 0.01)
+        assertEquals(14.45, NavigationCameraMath.easeZoom(15.0, 13.0), 0.01)
+    }
 }

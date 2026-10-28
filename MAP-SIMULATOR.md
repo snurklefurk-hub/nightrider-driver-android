@@ -97,3 +97,31 @@ Savannah, bridge, and Hilton Head, play at 1×/4×, inspect both themes, drag an
 recenter; test GPS lost/off-route to ensure controls remain usable. In Field Test,
 choose a safe destination while parked, drive with no interactions, confirm
 the highlighted route and camera scale, stop safely, and save a trace.
+
+## Road-first navigation polish (2026-10-27)
+
+The native MapLibre driver canvas now applies a flat road-focused palette in
+both LIGHT and DARK. DARK uses charcoal land and a subdued street network with
+brighter primary roads and casings to separate intersections; LIGHT uses
+soft blue-gray land with bright roads and restrained labels. The blue
+navigation route remains the strongest visual element. This changes paint
+only on known OpenFreeMap layers and skips missing layers safely; OpenFreeMap,
+OSRM, ride APIs and permissions are unchanged.
+
+The heading-up 2D camera now has bounded zoom transitions and can look ahead
+on the drawn route for a *sharp geometry bend* while near the route. This is
+a visual-only zoom cue, **not** evidence of a turn instruction or a street name.
+It does not reroute or give spoken guidance. GPS farther than 70m from the
+planned path disables the bend cue. The driver can still pan to stop follow
+and use Recenter to resume. Simulator and Field Test remain isolated from
+live dispatch actions.
+
+Road-test checklist (park to interact, or let a passenger operate the device):
+1. Simulate downtown streets, bridge and Hilton Head in both LIGHT/DARK;
+   check local roads, main-road casings, vehicle visibility and route contrast.
+2. Compare approach to sharp bends at slow/fast speeds; check that zoom
+   transitions are calm and never tilt into 3D.
+3. Pan the map, use Recenter, test LOST/OFF-ROUTE simulator GPS.
+4. In Field Test, record GPS while safely driving; inspect the map without
+   interacting, export CSV once parked, then review it in Web Map Lab.
+5. Confirm no false turn banners, audio, or live ride/dispatch changes.
