@@ -1031,6 +1031,19 @@ class MainActivity : Activity() {
         }
     }
 
+    // ---- helpers ---------------------------------------------------------
+
+    private fun num(obj: JSONObject, key: String): Double? {
+        val value = obj.optDouble(key, Double.NaN)
+        return if (value.isNaN()) null else value
+    }
+
+    private fun money(value: Double): String =
+        "\$" + String.format(Locale.US, "%.2f", value)
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
     private fun friendly(e: Throwable): String = when (e) {
         is ApiException -> e.message ?: "Server error"
         is java.net.UnknownHostException -> "No network connection."
