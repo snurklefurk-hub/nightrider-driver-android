@@ -185,6 +185,8 @@ class DriverMapActivity : Activity(), LocationListener {
         active = false; main.removeCallbacks(tick); main.removeCallbacks(fieldRefresh)
         main.removeCallbacks(motionFrames)
         motion.clear()
+        lastRenderedFixMs = Long.MIN_VALUE
+        lastRenderedFraction = -1.0
         simulation?.pause()
         fieldTest?.pause()
         if (simulation == null) (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
@@ -225,7 +227,14 @@ class DriverMapActivity : Activity(), LocationListener {
             for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
                 if (manager.isProviderEnabled(provider)) {
                     manager.getLastKnownLocation(provider)?.let { fix ->
-                        if (acceptsMapFix(fix)) location = Location(fix)
+                        if (acceptsMapFix(fix)) {
+                            location = Location(fix)
+                            motion.acceptFix(
+                                SimulationPoint(fix.latitude, fix.longitude),
+                                if (fix.hasBearing() && fix.hasSpeed() && fix.speed >= 2f)
+                                    fix.bearing.toDouble() else null,
+                                SystemClock.elapsedRealtime())
+                        }
                     }
                     manager.requestLocationUpdates(provider, 5000L, 10f, this)
                 }
