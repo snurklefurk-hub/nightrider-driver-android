@@ -44,6 +44,28 @@ class FieldModeChecks(unittest.TestCase):
         self.assertNotIn("Api.", quality)
         self.assertNotIn("HttpURLConnection", quality)
 
+    def test_motion_fusion_is_opt_in_and_isolated_from_live_rides(self):
+        activity = (SRC / "DriverMapActivity.kt").read_text()
+        panel = (SRC / "FieldTestPanel.kt").read_text()
+        adapter = (SRC / "FieldMotionSensors.kt").read_text()
+        fusion = (SRC / "FieldMotionFusion.kt").read_text()
+        self.assertIn("fieldMotionSensors = FieldMotionSensors(this)", activity)
+        self.assertIn("motionChanged: (Boolean) -> Boolean", panel)
+        self.assertIn("Motion fusion: OFF", panel)
+        self.assertIn("if (fieldTest?.motionEnabled == true)", activity)
+        self.assertIn("fieldMotionSensors?.stop()", activity)
+        self.assertIn("fieldTest?.onMotionAtFix(value.time", activity)
+        self.assertIn("Sensor.TYPE_GYROSCOPE", adapter)
+        self.assertIn("Sensor.TYPE_ACCELEROMETER", adapter)
+        self.assertIn("Sensor.TYPE_GRAVITY", adapter)
+        self.assertIn("Sensor.TYPE_ROTATION_VECTOR", adapter)
+        self.assertIn("gpsCourse", fusion)
+        self.assertIn("timeNs - anchored > 8_000_000_000L", fusion)
+        for unsafe in ("Api.", "HttpURLConnection", "/api/", "LocationManager",
+                       "TextToSpeech", "requestLocationUpdates"):
+            self.assertNotIn(unsafe, adapter)
+            self.assertNotIn(unsafe, fusion)
+
     def test_settings_exposes_opt_in_field_test(self):
         settings = (SRC / "SettingsActivity.kt").read_text()
         layout = (ROOT / "app/src/main/res/layout/activity_settings.xml").read_text()
