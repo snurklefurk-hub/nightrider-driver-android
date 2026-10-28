@@ -77,11 +77,16 @@ class DriverMapActivity : Activity(), LocationListener {
     private var fittedRide = ""
     private var simulation: MapSimulationPanel? = null
     private var fieldTest: FieldTestPanel? = null
+    private var fieldMotionSensors: FieldMotionSensors? = null
+    private var lastRenderedHeading: Double? = null
     private var fieldRouteStatus = "Long-press map to set a test destination."
     private var fieldCameraReady = false
     private val fieldRefresh = object : Runnable {
         override fun run() {
             if (active && fieldTest != null) {
+                fieldTest?.reportMotion(
+                    fieldMotionSensors?.availability ?: "Unavailable",
+                    fieldMotionSensors?.snapshot())
                 fieldTest?.refreshDiagnostics()
                 updateMap()
                 main.postDelayed(this, 4000)
@@ -116,7 +121,10 @@ class DriverMapActivity : Activity(), LocationListener {
             simulation = MapSimulationPanel(this, savedInstanceState) { updateMap() }
             root.addView(simulation!!.view)
         } else if (intent.getBooleanExtra("field_test", false)) {
-            fieldTest = FieldTestPanel(this, { updateMap() }, { fieldDestinationChanged() })
+            fieldMotionSensors = FieldMotionSensors(this)
+            fieldTest = FieldTestPanel(this, { updateMap() },
+                { fieldDestinationChanged() }, { enabled -> changeMotionFusion(enabled) })
+            fieldTest?.reportMotion(fieldMotionSensors!!.availability, null)
             root.addView(fieldTest!!.view)
         }
         setContentView(root)
@@ -171,6 +179,7 @@ class DriverMapActivity : Activity(), LocationListener {
             simulation != null -> simulation!!.resume()
             fieldTest != null -> {
                 startLocation()
+                if (fieldTest?.motionEnabled == true) changeMotionFusion(true)
                 main.post(fieldRefresh)
                 main.post(motionFrames)
             }
@@ -183,10 +192,12 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     override fun onPause() {
         active = false; main.removeCallbacks(tick); main.removeCallbacks(fieldRefresh)
+        fieldMotionSensors?.stop()
         main.removeCallbacks(motionFrames)
         motion.clear()
         lastRenderedFixMs = Long.MIN_VALUE
         lastRenderedFraction = -1.0
+        lastRenderedHeading = null
         simulation?.pause()
         fieldTest?.pause()
         if (simulation == null) (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
@@ -194,8 +205,29 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     override fun onStop() { mapView.onStop(); super.onStop() }
     override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
-    override fun onDestroy() { simulation?.destroy(); main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
+    override fun onDestroy() { fieldMotionSensors?.stop(); simulation?.destroy(); main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
     override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); simulation?.save(state); mapView.onSaveInstanceState(state) }
+
+    /** Only a deliberate Field Test toggle starts inertial sensors. */
+    private fun changeMotionFusion(enabled: Boolean): Boolean {
+        val sensors = fieldMotionSensors ?: return false
+        if (!enabled || !active) {
+            sensors.stop()
+            fieldTest?.reportMotion(sensors.availability, null)
+            lastRenderedHeading = null
+            return false
+        }
+        val started = sensors.start()
+        val existing = location
+        if (started && existing != null && existing.hasSpeed() &&
+            existing.hasBearing()) {
+            sensors.gpsCourse(existing.bearing.toDouble(), existing.speed.toDouble())
+        }
+        fieldTest?.reportMotion(sensors.availability, sensors.snapshot())
+        lastRenderedFraction = -1.0
+        lastRenderedHeading = null
+        return started
+    }
 
     private fun navigationFix(value: Location): NavigationFix = NavigationFix(
         value.latitude, value.longitude, value.time,
@@ -248,6 +280,7 @@ class DriverMapActivity : Activity(), LocationListener {
         fieldTest?.onFix(value)
         if (!acceptsMapFix(value)) {
             fieldTest?.onMapDecision(value.time, false)
+            fieldTest?.onMotionAtFix(value.time, fieldMotionSensors?.snapshot())
             fieldTest?.onFilteredMapFix()
             return
         }
@@ -263,6 +296,9 @@ class DriverMapActivity : Activity(), LocationListener {
                 SimulationPoint(old.latitude, old.longitude), destination)
         } else null
         motion.acceptFix(destination, derivedBearing, SystemClock.elapsedRealtime())
+        fieldMotionSensors?.gpsCourse(
+            derivedBearing, if (value.hasSpeed()) value.speed.toDouble() else null)
+        fieldTest?.onMotionAtFix(value.time, fieldMotionSensors?.snapshot())
         location = Location(value)
         updateMap()
     }
@@ -316,9 +352,16 @@ class DriverMapActivity : Activity(), LocationListener {
         val marker = displayMarker ?: return
         val sample = motion.frame(SystemClock.elapsedRealtime()) ?: return
         val fixTime = location?.time ?: return
+        val inertialHeading = if (fieldTest?.motionEnabled == true)
+            fieldMotionSensors?.heading() else null
+        val heading = inertialHeading ?: sample.bearingDegrees ?: rememberedHeading
+        val headingChanged = inertialHeading != null &&
+            (lastRenderedHeading == null ||
+                kotlin.math.abs(((inertialHeading - lastRenderedHeading!! + 540) % 360) - 180) > 0.3)
         if (sample.progress >= 1.0 && lastRenderedFraction >= 1.0 &&
-            lastRenderedFixMs == fixTime) return
+            lastRenderedFixMs == fixTime && !headingChanged) return
         val newFix = lastRenderedFixMs != fixTime
+        lastRenderedHeading = heading
         lastRenderedFixMs = fixTime
         lastRenderedFraction = sample.progress
         marker.position = LatLng(sample.position.lat, sample.position.lon)
@@ -339,7 +382,6 @@ class DriverMapActivity : Activity(), LocationListener {
             navigationZoom = NavigationCameraMath.easeZoom(
                 navigationZoom, NavigationCameraMath.zoomForUpcomingBend(base, bend))
         }
-        val heading = sample.bearingDegrees ?: rememberedHeading
         val ahead = NavigationCameraMath.lookAhead(
             sample.position, heading, gpsSpeed() ?: 0.0)
         val camera = CameraPosition.Builder()
