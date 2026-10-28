@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.ViewGroup
 import org.maplibre.android.gestures.MoveGestureDetector
 import android.widget.FrameLayout
@@ -19,6 +20,7 @@ import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
 import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraPosition
@@ -46,6 +48,17 @@ class DriverMapActivity : Activity(), LocationListener {
     private var navigationFollow = true
     private var rememberedHeading: Double? = null
     private var navigationZoom: Double? = null
+    private val motion = NavigationMotionSmoother()
+    private var displayMarker: Marker? = null
+    private var lastRenderedFixMs = Long.MIN_VALUE
+    private var lastRenderedFraction = -1.0
+    private val motionFrames = object : Runnable {
+        override fun run() {
+            if (!active || simulation != null) return
+            renderMotionFrame()
+            main.postDelayed(this, 125L)
+        }
+    }
     private var routeDistanceM: Double? = null
     private var routeDurationS: Double? = null
     private lateinit var prefs: Prefs
@@ -156,12 +169,22 @@ class DriverMapActivity : Activity(), LocationListener {
         active = true
         when {
             simulation != null -> simulation!!.resume()
-            fieldTest != null -> { startLocation(); main.post(fieldRefresh) }
-            else -> { startLocation(); main.post(tick) }
+            fieldTest != null -> {
+                startLocation()
+                main.post(fieldRefresh)
+                main.post(motionFrames)
+            }
+            else -> {
+                startLocation()
+                main.post(tick)
+                main.post(motionFrames)
+            }
         }
     }
     override fun onPause() {
         active = false; main.removeCallbacks(tick); main.removeCallbacks(fieldRefresh)
+        main.removeCallbacks(motionFrames)
+        motion.clear()
         simulation?.pause()
         fieldTest?.pause()
         if (simulation == null) (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(this)
@@ -218,6 +241,17 @@ class DriverMapActivity : Activity(), LocationListener {
             fieldTest?.onFilteredMapFix()
             return
         }
+        val old = location
+        val destination = SimulationPoint(value.latitude, value.longitude)
+        val derivedBearing = if (value.hasBearing() && value.hasSpeed() && value.speed >= 2f) {
+            value.bearing.toDouble()
+        } else if (old != null && value.time > old.time &&
+            SimulationLeg.meters(
+                SimulationPoint(old.latitude, old.longitude), destination) >= 10.0) {
+            NavigationCameraMath.bearingDegrees(
+                SimulationPoint(old.latitude, old.longitude), destination)
+        } else null
+        motion.acceptFix(destination, derivedBearing, SystemClock.elapsedRealtime())
         location = Location(value)
         updateMap()
     }
@@ -256,13 +290,61 @@ class DriverMapActivity : Activity(), LocationListener {
     private fun driverPoint(): LatLng? = location?.takeIf {
         System.currentTimeMillis() - it.time < if (fieldTest != null) 20_000L else 120_000L
     }?.let { LatLng(it.latitude, it.longitude) }
+
+    /** Visual position only. Routing and diagnostics still use accepted GPS. */
+    private fun displayDriverPoint(): LatLng? {
+        val raw = driverPoint() ?: return null
+        if (simulation != null) return raw
+        val frame = motion.frame(SystemClock.elapsedRealtime()) ?: return raw
+        return LatLng(frame.position.lat, frame.position.lon)
+    }
+
+    private fun renderMotionFrame() {
+        val m = map ?: return
+        if (m.style == null || driverPoint() == null) return
+        val marker = displayMarker ?: return
+        val sample = motion.frame(SystemClock.elapsedRealtime()) ?: return
+        val fixTime = location?.time ?: return
+        if (sample.progress >= 1.0 && lastRenderedFraction >= 1.0 &&
+            lastRenderedFixMs == fixTime) return
+        lastRenderedFixMs = fixTime
+        lastRenderedFraction = sample.progress
+        marker.position = LatLng(sample.position.lat, sample.position.lon)
+        m.updateMarker(marker)
+
+        val follows = if (fieldTest != null) fieldTest?.follow == true else navigationFollow
+        if (!follows) return
+
+        // Calculate route-based zoom once per fix; frames only interpolate
+        // position and heading. Avoid restarting 450ms camera animations.
+        if (sample.progress == 0.0 || navigationZoom == null) {
+            val speed = gpsSpeed() ?: 0.0
+            val bend = if (routePoints.size >= 3) NavigationCameraMath.nextBendMeters(
+                SimulationPoint(location!!.latitude, location!!.longitude),
+                routePoints.map { SimulationPoint(it.latitude, it.longitude) }
+            ) else null
+            val base = NavigationCameraMath.zoomForSpeed(speed)
+            navigationZoom = NavigationCameraMath.easeZoom(
+                navigationZoom, NavigationCameraMath.zoomForUpcomingBend(base, bend))
+        }
+        val heading = sample.bearingDegrees ?: rememberedHeading
+        val ahead = NavigationCameraMath.lookAhead(
+            sample.position, heading, gpsSpeed() ?: 0.0)
+        val camera = CameraPosition.Builder()
+            .target(LatLng(ahead.lat, ahead.lon))
+            .bearing(heading ?: 0.0)
+            .zoom(navigationZoom ?: NavigationCameraMath.zoomForSpeed(gpsSpeed() ?: 0.0))
+            .tilt(0.0).build()
+        m.moveCamera(CameraUpdateFactory.newCameraPosition(camera))
+    }
+
     private fun centerMap() {
         navigationFollow = true
         fieldTest?.setFollow(true)
         simulation?.setFollow(true)
-        val target = driverPoint() ?: point(ride?.optJSONArray("pickup_coords")) ?: LatLng(32.0811, -81.0911)
+        val target = displayDriverPoint() ?: point(ride?.optJSONArray("pickup_coords")) ?: LatLng(32.0811, -81.0911)
         val m = map ?: return
-        if (driverPoint() != null) moveNavigationCamera(m, target)
+        if (driverPoint() != null && simulation != null) moveNavigationCamera(m, target)
         else m.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.5))
     }
 
@@ -361,7 +443,7 @@ class DriverMapActivity : Activity(), LocationListener {
             ride = sim.sampleRide()
             location = sim.sampleLocation()
         }
-        val current = ride; val driver = driverPoint()
+        val current = ride; val driver = driverPoint(); val displayDriver = displayDriverPoint()
         val pickup = point(current?.optJSONArray("pickup_coords")); val dropoff = point(current?.optJSONArray("dropoff_coords"))
         val id = current?.optString("id") ?: ""; val stage = current?.optString("status") ?: ""
         val key = "$id|$stage"
@@ -375,12 +457,16 @@ class DriverMapActivity : Activity(), LocationListener {
                 else sim.engine.leg.points.map { LatLng(it.lat, it.lon) }
         }
         m.clear()
-        driver?.let { m.addMarker(MarkerOptions().position(it).icon(driverMarker).title(if (sim != null) "Simulated driver" else "You")) }
+        displayMarker = null
+        displayDriver?.let {
+            displayMarker = m.addMarker(MarkerOptions().position(it).icon(driverMarker)
+                .title(if (sim != null) "Simulated driver" else "You"))
+        }
         pickup?.let { m.addMarker(MarkerOptions().position(it).title("Pickup")) }
         dropoff?.let { m.addMarker(MarkerOptions().position(it).title("Destination")) }
         paintRoute(m)
         renderNavigation(stage)
-        if (driver != null) moveNavigationCamera(m, driver)
+        if (driver != null && sim != null) moveNavigationCamera(m, driver)
         if (id != fittedRide && id.isNotEmpty()) { fittedRide = id; centerMap() }
         if (id.isEmpty()) fittedRide = ""
         if (sim != null) {
@@ -423,8 +509,13 @@ class DriverMapActivity : Activity(), LocationListener {
     private fun drawFieldMap(m: MapLibreMap) {
         val panel = fieldTest ?: return
         val driver = driverPoint()
+        val displayDriver = displayDriverPoint()
         m.clear()
-        driver?.let { m.addMarker(MarkerOptions().position(it).icon(driverMarker).title("Live GPS · field test")) }
+        displayMarker = null
+        displayDriver?.let {
+            displayMarker = m.addMarker(MarkerOptions().position(it)
+                .icon(driverMarker).title("Live GPS · field test"))
+        }
         panel.destination?.let { m.addMarker(MarkerOptions().position(it).title("Test destination")) }
         paintRoute(m)
         val trail = panel.trail()
@@ -432,7 +523,6 @@ class DriverMapActivity : Activity(), LocationListener {
             m.addPolyline(PolylineOptions().addAll(trail).color(Color.rgb(255, 171, 58)).width(4f))
         }
         if (panel.follow && driver != null) {
-            moveNavigationCamera(m, driver)
             fieldCameraReady = true
         }
         renderNavigation("")
