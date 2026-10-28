@@ -23,7 +23,6 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.annotations.Polyline
-import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -56,7 +55,7 @@ class VelaNavigationActivity : Activity(), LocationListener {
     private var destinationKey = ""
     private var marker: Marker? = null
     private var destinationMarker: Marker? = null
-    private var line: Polyline? = null
+    private val routeLines = mutableListOf<Polyline>()
     private var generation = 0
     private var routing = false
     private var rideBusy = false
@@ -131,8 +130,11 @@ class VelaNavigationActivity : Activity(), LocationListener {
             }
             m.cameraPosition = CameraPosition.Builder().target(LatLng(32.0811, -81.0911)).zoom(13.0).build()
             m.setStyle(if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
-                else "https://tiles.openfreemap.org/styles/dark") {
-                if (!isFinishing && !isDestroyed) { renderRoute(); renderMarker(); center() }
+                else "https://tiles.openfreemap.org/styles/dark") { style ->
+                if (!isFinishing && !isDestroyed) {
+                    VelaMapAppearance.apply(style, prefs.aeroEnabled)
+                    renderRoute(); renderMarker(); center()
+                }
             }
         }
         render()
@@ -262,11 +264,11 @@ class VelaNavigationActivity : Activity(), LocationListener {
     private fun renderRoute() {
         val m = map ?: return
         if (m.style == null) return
-        line?.let { m.removePolyline(it) }; line = null
+        routeLines.forEach { m.removePolyline(it) }; routeLines.clear()
         destinationMarker?.let { m.removeMarker(it) }; destinationMarker = null
         session.route?.let { r ->
-            line = m.addPolyline(PolylineOptions().addAll(r.polyline.map { LatLng(it.lat,it.lng) })
-                .color(appearanceColor(R.attr.nrAccent)).width(6f))
+            routeLines.addAll(VelaMapAppearance.drawRoute(m,
+                r.polyline.map { LatLng(it.lat,it.lng) }, prefs.aeroEnabled))
         }
         destination?.let { destinationMarker = m.addMarker(MarkerOptions().position(LatLng(it.lat,it.lng)).title(destinationName)) }
     }
