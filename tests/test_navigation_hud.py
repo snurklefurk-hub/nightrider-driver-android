@@ -54,5 +54,23 @@ class NavigationHudChecks(unittest.TestCase):
             self.assertNotIn(unsafe, style)
 
 
+    def test_live_gps_marker_uses_display_only_motion_smoothing(self):
+        activity = (SRC / "DriverMapActivity.kt").read_text()
+        smoother = (SRC / "NavigationMotionSmoother.kt").read_text()
+        self.assertIn("motion.acceptFix(destination, derivedBearing,", activity)
+        self.assertIn("renderMotionFrame()", activity)
+        self.assertIn("marker.position = LatLng(", activity)
+        self.assertIn("m.updateMarker(marker)", activity)
+        self.assertIn("m.moveCamera(CameraUpdateFactory.newCameraPosition(camera))", activity)
+        self.assertIn("displayDriverPoint()", activity)
+        self.assertIn("if (!active || simulation != null) return", activity)
+        self.assertIn("fieldTest?.onFix(value)", activity)
+        self.assertIn("private fun driverPoint(): LatLng?", activity)
+        self.assertIn("No extrapolation", smoother)
+        self.assertIn("lastFixReceivedAtMs", smoother)
+        for unsafe in ("Api.", "HttpURLConnection", "LocationManager", "TextToSpeech", "/api/"):
+            self.assertNotIn(unsafe, smoother)
+
+
 if __name__ == "__main__":
     unittest.main()
