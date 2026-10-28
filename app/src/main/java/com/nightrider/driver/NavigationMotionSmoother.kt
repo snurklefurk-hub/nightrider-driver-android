@@ -1,7 +1,5 @@
 package com.nightrider.driver
 
-import kotlin.math.abs
-
 /**
  * Animation of *accepted* GPS fixes for the map marker and follow camera.
  *
