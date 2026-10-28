@@ -1,0 +1,3 @@
+[submodule "navigation/vela"]
+	path = navigation/vela
+	url = https://github.com/PimpinPumpkin/Vela.git
