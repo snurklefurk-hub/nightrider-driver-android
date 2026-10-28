@@ -208,11 +208,21 @@ class FieldTestPanel(
         render()
     }
 
+    /** A new consent result supersedes the previous video session identity. */
+    fun screenCaptureAuthorized(sessionId: String) {
+        videoSessionId = sessionId
+        videoPending = true
+        videoReady = false
+        videoMessage = "Starting screen recorder…"
+        render()
+    }
+
     /** Keep the GPS session tied to the exact MediaRecorder session identity. */
     fun updateVideoState(state: FieldScreenRecorderService.RecordingState) {
         when (state.phase) {
             FieldScreenRecorderService.Phase.RECORDING -> {
-                if (!videoRecording && (videoPending || videoSessionId == state.sessionId)) {
+                if (!videoRecording && videoPending &&
+                    videoSessionId == state.sessionId) {
                     videoPending = false
                     videoStopping = false
                     videoRecording = true
@@ -236,7 +246,8 @@ class FieldTestPanel(
                 }
             }
             FieldScreenRecorderService.Phase.ERROR -> {
-                if (videoPending || videoRecording || videoStopping) {
+                if ((videoPending || videoRecording || videoStopping) &&
+                    videoSessionId == state.sessionId) {
                     videoRecording = false
                     videoStopping = false
                     videoPending = false
