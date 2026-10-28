@@ -56,6 +56,10 @@ class NavigationMotionSmoother {
         val endpoint = destination ?: return origin
         val fraction = if (durationMs <= 0L) 1.0
             else ((nowMs - startedAtMs).toDouble() / durationMs).coerceIn(0.0, 1.0)
+        // Preserve exact measured coordinates at animation boundaries.
+        if (fraction <= 0.0) return Frame(origin.position, origin.bearingDegrees, 0.0)
+        if (fraction >= 1.0) return Frame(endpoint,
+            destinationBearing ?: origin.bearingDegrees, 1.0)
         val bearing = if (origin.bearingDegrees != null && destinationBearing != null) {
             val delta = signedAngleDifference(origin.bearingDegrees, destinationBearing!!)
             wrap(origin.bearingDegrees + delta * fraction)
