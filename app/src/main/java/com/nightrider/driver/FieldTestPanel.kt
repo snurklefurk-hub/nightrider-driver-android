@@ -31,6 +31,7 @@ class FieldTestPanel(
     var follow = true
         private set
     private var latest: Location? = null
+    private var filteredMapFixes = 0
     private val recordButton = Button(activity)
     private val followButton = Button(activity)
     private val shareButton = Button(activity)
@@ -54,7 +55,10 @@ class FieldTestPanel(
             setTextColor(Color.GRAY)
         })
         recordButton.setOnClickListener {
-            if (trace.recording) trace.stop() else trace.start()
+            if (trace.recording) trace.stop() else {
+                trace.start()
+                filteredMapFixes = 0
+            }
             render(); changed()
         }
         followButton.setOnClickListener { setFollow(!follow) }
@@ -72,7 +76,12 @@ class FieldTestPanel(
         saveButton.setOnClickListener { saveToFile() }
         val clearTraceButton = Button(activity).apply {
             text = "Clear trace"
-            setOnClickListener { trace.clear(); render(); changed() }
+            setOnClickListener {
+                trace.clear()
+                filteredMapFixes = 0
+                render()
+                changed()
+            }
         }
         panel.addView(row(recordButton, followButton))
         panel.addView(row(routeButton, clearButton))
@@ -116,6 +125,11 @@ class FieldTestPanel(
         render()
     }
 
+    fun onFilteredMapFix() {
+        filteredMapFixes++
+        render()
+    }
+
     fun trail(): List<LatLng> = trace.samples.map { LatLng(it.lat, it.lon) }
 
     fun refreshDiagnostics() = render()
@@ -137,13 +151,16 @@ class FieldTestPanel(
             fix == null -> "GPS: waiting for fix"
             age != null && age > 15 -> "GPS: stale (" + age + "s)"
             else -> "GPS: " + (if (fix.hasAccuracy()) "±" + fix.accuracy.toInt() + "m" else "accuracy unknown") +
-                " · " + String.format(Locale.US, "%.0f", (if (fix.hasSpeed()) fix.speed else 0f) * 2.23694) + " mph"
+                " · " + String.format(Locale.US, "%.0f", (if (fix.hasSpeed()) fix.speed else 0f) * 2.23694) + " mph" +
+                " · " + (fix.provider ?: "unknown")
         }
         diagnostics.text = gps + "\n" +
             (if (trace.recording) "Recording" else "Not recording") + " · " +
             trace.samples.size + " fixes · " +
             String.format(Locale.US, "%.2f", trace.distanceMeters() / 1609.344) +
-            " mi traced · " + (if (destination == null) "No test pin" else "Test pin set")
+            " mi traced (estimate) · " + (if (destination == null) "No test pin" else "Test pin set") +
+            "\nMap ignored " + filteredMapFixes +
+            " unreliable fixes · CSV keeps raw readings"
     }
 
     private fun saveToFile() {
