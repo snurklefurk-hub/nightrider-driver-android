@@ -98,6 +98,8 @@ class FieldModeChecks(unittest.TestCase):
         self.assertIn("Record screen + GPS", panel)
         self.assertIn("Save MP4", panel)
         self.assertIn("SYNC epoch_ms", panel)
+        self.assertIn("screenCaptureAuthorized(id)", activity)
+        self.assertIn("videoSessionId == state.sessionId", panel)
         self.assertIn("trace.start()", panel)
         self.assertIn("trace.stop()", panel)
         self.assertIn('android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION', manifest)
