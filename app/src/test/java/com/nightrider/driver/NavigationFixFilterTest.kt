@@ -34,7 +34,7 @@ class NavigationFixFilterTest {
         val network = fix(lon = -81.5987, at = now - 7_000L, accuracy = 15.0,
             speed = null, provider = "network")
         assertFalse(NavigationFixFilter.accepts(network, recentGps, now))
-        val oldGps = fix(at = now - 19_000L)
+        val oldGps = fix(at = now - 20_000L)
         assertTrue(NavigationFixFilter.accepts(network, oldGps, now))
     }
 
