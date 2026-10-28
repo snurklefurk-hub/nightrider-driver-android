@@ -307,6 +307,7 @@ class DriverMapActivity : Activity(), LocationListener {
         val fixTime = location?.time ?: return
         if (sample.progress >= 1.0 && lastRenderedFraction >= 1.0 &&
             lastRenderedFixMs == fixTime) return
+        val newFix = lastRenderedFixMs != fixTime
         lastRenderedFixMs = fixTime
         lastRenderedFraction = sample.progress
         marker.position = LatLng(sample.position.lat, sample.position.lon)
@@ -317,7 +318,7 @@ class DriverMapActivity : Activity(), LocationListener {
 
         // Calculate route-based zoom once per fix; frames only interpolate
         // position and heading. Avoid restarting 450ms camera animations.
-        if (sample.progress == 0.0 || navigationZoom == null) {
+        if (newFix || navigationZoom == null) {
             val speed = gpsSpeed() ?: 0.0
             val bend = if (routePoints.size >= 3) NavigationCameraMath.nextBendMeters(
                 SimulationPoint(location!!.latitude, location!!.longitude),
