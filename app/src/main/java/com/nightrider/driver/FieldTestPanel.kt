@@ -121,8 +121,13 @@ class FieldTestPanel(
         latest = Location(value)
         trace.add(FieldFix(value.time, value.latitude, value.longitude,
             if (value.hasAccuracy()) value.accuracy else 999f,
-            if (value.hasSpeed()) value.speed else 0f))
+            if (value.hasSpeed()) value.speed else 0f,
+            (value.provider ?: "unknown").lowercase(Locale.US)))
         render()
+    }
+
+    fun onMapDecision(epochMs: Long, accepted: Boolean) {
+        trace.markDecision(epochMs, accepted)
     }
 
     fun onFilteredMapFix() {
