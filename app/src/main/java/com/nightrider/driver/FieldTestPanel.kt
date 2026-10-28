@@ -54,6 +54,7 @@ class FieldTestPanel(
     private val shareButton = Button(activity)
     private val saveButton = Button(activity)
     private val diagnostics = TextView(activity)
+    private val syncLabel = TextView(activity)
     val view: View
 
     init {
@@ -71,6 +72,16 @@ class FieldTestPanel(
             textSize = 12f
             setTextColor(Color.GRAY)
         })
+        syncLabel.apply {
+            textSize = 13f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.rgb(148, 36, 33))
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+            visibility = View.GONE
+        }
+        // Keep the sync timestamp always visible at the top of the Field Test
+        // panel rather than buried in diagnostics in a scrolling container.
+        panel.addView(syncLabel)
         recordButton.setOnClickListener {
             if (videoPending || videoRecording || videoStopping) return@setOnClickListener
             if (trace.recording) trace.stop() else {
@@ -266,6 +277,10 @@ class FieldTestPanel(
         screenButton.isEnabled = !videoPending && !videoStopping
         saveVideoButton.text = "Save MP4"
         saveVideoButton.isEnabled = videoReady
+        syncLabel.visibility = if (videoRecording) View.VISIBLE else View.GONE
+        if (videoRecording) {
+            syncLabel.text = "● SCREEN + GPS   SYNC epoch_ms " + System.currentTimeMillis()
+        }
         followButton.text = if (follow) "Follow: ON" else "Follow: OFF"
         motionButton.text = if (motionEnabled) "Motion fusion: ON · experimental"
             else "Motion fusion: OFF · tap when parked"
