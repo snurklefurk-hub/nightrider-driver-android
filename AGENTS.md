@@ -12,7 +12,7 @@
 
 ## Release and integration safety
 
-- Never commit or force-push directly to `main`. Never auto-merge. The integration owner sequences merges and verifies current branch, tests and cross-repo compatibility.
+- Never commit or force-push directly to `main`. Never auto-merge. **WORK NR is the default integration owner** unless the product owner explicitly delegates it. Other agents prepare PRs; the integrator sequences merges and verifies current branch, tests and cross-repo compatibility.
 - **A push to Android `main` can trigger a signed production/pilot APK release.** A web/backend merge can redeploy Render. Do not merge changes casually just to update documentation.
 - Do not bypass a tool/provider safety block through a different write mechanism.
 - Android API assumptions must match current `NightRider/server.py`; if an API contract changes, link the companion PR and identify backward-compatible rollout order.
