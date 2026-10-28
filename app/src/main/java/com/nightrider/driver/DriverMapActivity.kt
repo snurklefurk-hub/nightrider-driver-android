@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -81,6 +83,14 @@ class DriverMapActivity : Activity(), LocationListener {
     private var lastRenderedHeading: Double? = null
     private var fieldRouteStatus = "Long-press map to set a test destination."
     private var fieldCameraReady = false
+    private var exportVideo: java.io.File? = null
+    private val screenVideoMonitor = object : Runnable {
+        override fun run() {
+            if (!active || fieldTest == null) return
+            fieldTest?.updateVideoState(FieldScreenRecorderService.state)
+            main.postDelayed(this, 500L)
+        }
+    }
     private val fieldRefresh = object : Runnable {
         override fun run() {
             if (active && fieldTest != null) {
@@ -123,7 +133,8 @@ class DriverMapActivity : Activity(), LocationListener {
         } else if (intent.getBooleanExtra("field_test", false)) {
             fieldMotionSensors = FieldMotionSensors(this)
             fieldTest = FieldTestPanel(this, { updateMap() },
-                { fieldDestinationChanged() }, { enabled -> changeMotionFusion(enabled) })
+                { fieldDestinationChanged() }, { enabled -> changeMotionFusion(enabled) },
+                { start -> screenCaptureAction(start) }, { requestVideoSave() })
             fieldTest?.reportMotion(fieldMotionSensors!!.availability, null)
             root.addView(fieldTest!!.view)
         }
@@ -165,8 +176,34 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == FieldTestPanel.EXPORT_CSV_REQUEST && resultCode == RESULT_OK) {
-            data?.data?.let { fieldTest?.writeCsv(it) }
+        when (requestCode) {
+            FieldTestPanel.EXPORT_CSV_REQUEST -> if (resultCode == RESULT_OK) {
+                data?.data?.let { fieldTest?.writeCsv(it) }
+            }
+            FieldScreenRecorderService.REQUEST_CAPTURE -> {
+                if (resultCode == RESULT_OK && data != null && fieldTest != null) {
+                    val id = "nightrider-field-" + System.currentTimeMillis()
+                    fieldTest?.screenCaptureAuthorized(id)
+                    val service = android.content.Intent(
+                        this, FieldScreenRecorderService::class.java)
+                        .setAction(FieldScreenRecorderService.ACTION_START)
+                        .putExtra(FieldScreenRecorderService.EXTRA_SESSION, id)
+                        .putExtra(FieldScreenRecorderService.EXTRA_PERMISSION, data)
+                        .putExtra(FieldScreenRecorderService.EXTRA_RESULT_CODE, resultCode)
+                    try { startForegroundService(service) } catch (error: Exception) {
+                        fieldTest?.screenCaptureCancelled()
+                        android.widget.Toast.makeText(this, "Screen recorder unavailable: " +
+                            (error.message ?: "permission error"),
+                            android.widget.Toast.LENGTH_LONG).show()
+                    }
+                } else fieldTest?.screenCaptureCancelled()
+            }
+            FieldScreenRecorderService.REQUEST_SAVE_MP4 -> {
+                val uri = if (resultCode == RESULT_OK) data?.data else null
+                val video = exportVideo
+                exportVideo = null
+                if (uri != null && video != null && video.isFile) saveVideoTo(uri, video)
+            }
         }
     }
 
@@ -182,6 +219,7 @@ class DriverMapActivity : Activity(), LocationListener {
                 if (fieldTest?.motionEnabled == true) changeMotionFusion(true)
                 main.post(fieldRefresh)
                 main.post(motionFrames)
+                main.post(screenVideoMonitor)
             }
             else -> {
                 startLocation()
@@ -192,6 +230,14 @@ class DriverMapActivity : Activity(), LocationListener {
     }
     override fun onPause() {
         active = false; main.removeCallbacks(tick); main.removeCallbacks(fieldRefresh)
+        main.removeCallbacks(screenVideoMonitor)
+        // Match foreground GPS collection to the screen-video lifetime.
+        // The Android consent dialog pauses us BEFORE video has started.
+        if (fieldTest != null &&
+            (fieldTest?.isVideoRunning() == true ||
+                FieldScreenRecorderService.state.phase ==
+                FieldScreenRecorderService.Phase.RECORDING))
+            FieldScreenRecorderService.requestStop(this)
         fieldMotionSensors?.stop()
         main.removeCallbacks(motionFrames)
         motion.clear()
@@ -207,6 +253,71 @@ class DriverMapActivity : Activity(), LocationListener {
     override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
     override fun onDestroy() { fieldMotionSensors?.stop(); simulation?.destroy(); main.removeCallbacksAndMessages(null); io.shutdownNow(); routing.shutdownNow(); mapView.onDestroy(); super.onDestroy() }
     override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); simulation?.save(state); mapView.onSaveInstanceState(state) }
+
+    /** Request fresh OS consent for each Field Test screen capture. */
+    private fun screenCaptureAction(start: Boolean) {
+        if (fieldTest == null) return
+        if (!start) {
+            FieldScreenRecorderService.requestStop(this)
+            return
+        }
+        try {
+            val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE)
+                as MediaProjectionManager
+            @Suppress("DEPRECATION")
+            startActivityForResult(manager.createScreenCaptureIntent(),
+                FieldScreenRecorderService.REQUEST_CAPTURE)
+        } catch (error: Exception) {
+            fieldTest?.screenCaptureCancelled()
+            android.widget.Toast.makeText(this,
+                "Cannot request screen capture: " + (error.message ?: "unavailable"),
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun requestVideoSave() {
+        val sessionId = FieldScreenRecorderService.state.sessionId
+        if (FieldScreenRecorderService.state.phase !=
+            FieldScreenRecorderService.Phase.READY) return
+        val source = FieldScreenRecorderService.videoFile(this, sessionId)
+        if (source == null || !source.isFile || source.length() <= 4_096L) {
+            android.widget.Toast.makeText(this, "MP4 not available to save.",
+                android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        exportVideo = source
+        val picker = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+            type = "video/mp4"
+            putExtra(android.content.Intent.EXTRA_TITLE, "$sessionId.mp4")
+        }
+        @Suppress("DEPRECATION")
+        startActivityForResult(picker, FieldScreenRecorderService.REQUEST_SAVE_MP4)
+    }
+
+    private fun saveVideoTo(uri: Uri, source: java.io.File) {
+        io.execute {
+            try {
+                val output = contentResolver.openOutputStream(uri)
+                    ?: throw IllegalStateException("Could not open destination")
+                source.inputStream().use { input -> output.use { input.copyTo(it) } }
+                // Export succeeded. Keep only the user's chosen copy rather
+                // than accumulating private route footage inside the app.
+                source.delete()
+                runOnUiThread {
+                    fieldTest?.videoExported()
+                    android.widget.Toast.makeText(this, "Screen MP4 saved.",
+                        android.widget.Toast.LENGTH_LONG).show()
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    android.widget.Toast.makeText(this,
+                        "Could not save MP4: " + (error.message ?: "try another folder"),
+                        android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     /** Only a deliberate Field Test toggle starts inertial sensors. */
     private fun changeMotionFusion(enabled: Boolean): Boolean {
