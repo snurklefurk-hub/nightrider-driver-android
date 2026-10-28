@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "NightRider Driver"
 include ':app'
+
+include ':vela-engine'

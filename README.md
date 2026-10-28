@@ -48,17 +48,25 @@ Original Dark.
 
 ## Driver map and testing
 
-Open the driver map from the main board to see your position, ride endpoints
-and an estimated route. The map includes a flat heading-up camera, SmartZoom,
-GPS quality filtering and motion smoothing. It does not provide turn-by-turn
-guidance or automatic rerouting.
+The main board's map button opens the first **Vela-powered navigation** iteration.
+Vela's pinned turn progression, arrival and off-route engine drives silent on-screen guidance.
+Assigned rides route to pickup; the existing to_dropoff stage switches to the destination.
+Navigation never changes ride stages, sends chat, or modifies assignments.
 
-**Settings → Map simulator** replays bundled Savannah, Talmadge Bridge and
-Hilton Head sample journeys without using real GPS or changing rides.
-**Settings → Field test (live GPS)** tests the same map with actual location,
-local CSV export, optional motion fusion and explicitly consented screen
-video recording without audio. See [MAP-SIMULATOR.md](MAP-SIMULATOR.md) for
-controls, recording and trace review in the website's Map Lab.
+**Settings → Vela navigation test (live GPS)** opens the new screen without an account.
+Long-press a destination, then use Save GPS CSV to export raw samples and map acceptance decisions.
+Precise GPS is required; coarse/old fixes do not move the navigation state. A stale accepted
+position stays visible with its age and speed becomes unavailable. Heading remains fixed
+when stopped. Guidance only runs while this screen is open; leaving it stops GPS updates.
+
+Routes use the free OSRM demonstration service and OpenFreeMap tiles. Directions have no
+live traffic. No Google lookups, audio, microphone, offline downloads or background navigation
+service are included in this initial integration. This is Vela's navigation **engine**, with
+a native NightRider map screen; Vela's full Compose interface is not embedded.
+
+The old simulator and screen-recording Field Test are explicitly labeled **Legacy** in Settings
+and remain available for comparing earlier GPS evidence. They are not the new navigation screen.
+See [NAVIGATION-VELA.md](NAVIGATION-VELA.md) for provenance, boundaries and validation.
 
 ## Build from source
 
@@ -67,7 +75,7 @@ optional. Both the production driver module and the separate `nav-prototype/`
 appearance preview use the pinned MapLibre Android SDK.
 
 Run `python -m unittest discover -s tests -p 'test_*.py' -v` for source/package
-checks and `gradle testDebugUnitTest assembleDebug` for the Kotlin unit tests
+checks and `gradle :vela-engine:test testDebugUnitTest assembleDebug` for the Kotlin unit tests
 and development APK. The signed-release workflow also runs the source and
 Kotlin checks before building an update.
 
