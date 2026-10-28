@@ -189,3 +189,23 @@ five-second intervals and that heading changes stay controlled. Use
 Recenter and manual pan while parked. Export a new raw CSV, and report
 whether the movement feels smoother without noticeably lagging the car.
 Never depend on this preview for safety-critical turn instructions.
+
+
+## Field Test CSV: reported map decisions (next iteration)
+
+New CSV exports retain the original first five columns and append two:
+`provider` (gps/network/fused/passive/unknown) and `map_decision`
+(accepted/rejected/unrated). The decision matches the **actual GPS fix
+quality gate in the running app**, not the Web Map Lab's estimate.
+
+All raw fixes are still stored locally, subject to the same 1s deduplication
+and 1,500-fix bound. An `unrated` sample means no corresponding map decision
+was recorded; it should not be counted as accepted. The Web Map Lab accepts
+both earlier five-column exports and the seven-column enhanced format.
+The phone's accepted/rejected count represents only sampled fixes written
+to the CSV. It does not reconstruct motion-smoothing animation frames and
+cannot independently prove visual smoothness.
+
+Keep any exported precise-location traces private; they are never transmitted
+to NightRider servers automatically. Use the Field Test only as a passenger
+or with no interaction while driving.
