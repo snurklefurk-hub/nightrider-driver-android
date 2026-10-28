@@ -141,6 +141,10 @@ class FieldTestPanel(
         trace.markDecision(epochMs, accepted)
     }
 
+    fun onMotionAtFix(epochMs: Long, snapshot: FieldMotionSnapshot?) {
+        trace.markMotion(epochMs, snapshot)
+    }
+
     fun onFilteredMapFix() {
         filteredMapFixes++
         render()
