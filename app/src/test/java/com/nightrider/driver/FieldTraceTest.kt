@@ -55,8 +55,9 @@ class FieldTraceTest {
         t.stop()
         val csv = t.csv()
         assertTrue(csv.startsWith(
-            "epoch_ms,latitude,longitude,accuracy_m,speed_mps,provider,map_decision\n"))
-        assertTrue(csv.contains("1000,32.08,-81.09,5.0,5.0,unknown,unrated"))
+            "epoch_ms,latitude,longitude,accuracy_m,speed_mps,provider,map_decision," +
+                "fusion_heading_deg,gyro_yaw_dps,linear_accel_mps2,phone_azimuth_deg\n"))
+        assertTrue(csv.contains("1000,32.08,-81.09,5.0,5.0,unknown,unrated,,,,"))
         t.clear()
         assertEquals(1, t.csv().lines().count { it.startsWith("epoch_ms") })
     }
@@ -72,8 +73,8 @@ class FieldTraceTest {
         t.markDecision(2500L, true)
         assertEquals(listOf("accepted", "rejected"), t.samples.map { it.mapDecision })
         val csv = t.csv()
-        assertTrue(csv.contains("1000,32.08,-81.09,5.0,10.0,gps,accepted"))
-        assertTrue(csv.contains("2000,32.09,-81.09,400.0,0.0,network,rejected"))
+        assertTrue(csv.contains("1000,32.08,-81.09,5.0,10.0,gps,accepted,,,,"))
+        assertTrue(csv.contains("2000,32.09,-81.09,400.0,0.0,network,rejected,,,,"))
     }
 
     @Test fun csvEscapesUnknownProviderValuesWithSafeEnum() {
@@ -82,6 +83,16 @@ class FieldTraceTest {
         t.add(FieldFix(1000L, 32.08, -81.09, 5f, 0f, "=HYPERLINK(\"bad\")"))
         assertTrue(t.csv().contains(",unknown,unrated"))
         assertFalse(t.csv().contains("HYPERLINK"))
+    }
+
+    @Test fun sensorMetricsAreOptInAndAttachedOnlyToRecordedFixes() {
+        val t = FieldTrace()
+        t.start()
+        t.add(fix(1000L))
+        t.markMotion(1000L, FieldMotionSnapshot(123.0, -15.0, 1.5, 55.0, 1.0))
+        t.markMotion(2000L, FieldMotionSnapshot(40.0, 0.0, 0.0, null, 0.0))
+        assertTrue(t.csv().contains(",unrated,123.0,-15.0,1.5,55.0"))
+        assertEquals(1, t.samples.size)
     }
 
     @Test fun nearestPointToRouteIsInMeters() {
