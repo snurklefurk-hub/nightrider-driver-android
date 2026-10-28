@@ -20,7 +20,8 @@ class FieldModeChecks(unittest.TestCase):
     def test_field_screen_bypasses_live_ride_refresh(self):
         source = (SRC / "DriverMapActivity.kt").read_text()
         self.assertIn('intent.getBooleanExtra("field_test", false)', source)
-        self.assertIn('fieldTest != null -> { startLocation(); main.post(fieldRefresh) }', source)
+        self.assertRegex(source, r'fieldTest != null -> \\{\\s*startLocation\\(\\);?\\s*main\\.post\\(fieldRefresh\\)')
+        self.assertIn("main.post(motionFrames)", source)
         self.assertIn("if (fieldTest != null) { drawFieldMap(m); return }", source)
         self.assertIn("if (simulation != null) return", source)
         self.assertIn("if (simulation != null) simulation!!.resume()", source.replace(
