@@ -20,7 +20,9 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
-import android.widget.CheckBox
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -30,6 +32,7 @@ import org.json.JSONObject
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -59,11 +62,15 @@ class MainActivity : Activity() {
     private lateinit var boardStatus: TextView
     private lateinit var openRides: LinearLayout
     private lateinit var myRides: LinearLayout
-    private lateinit var chatReplyHint: TextView
+    private lateinit var chatTabTeam: Button
+    private lateinit var chatTabDispatch: Button
+    private lateinit var chatTabRider: Button
+    private lateinit var chatRecipientSummary: TextView
+    private lateinit var chatRideSelector: Spinner
+    private lateinit var chatSendStatus: TextView
     private lateinit var chatLog: ScrollView
     private lateinit var chatContent: LinearLayout
     private lateinit var chatText: EditText
-    private lateinit var chatPrivate: CheckBox
     private lateinit var chatSend: Button
 
     private val io = Executors.newSingleThreadExecutor()
@@ -73,8 +80,17 @@ class MainActivity : Activity() {
     private val chatSending = AtomicBoolean(false)
 
     private var chatSeen = 0.0
-    private val shownChatIds = HashSet<String>()
-    private var chatReplyTarget: JSONObject? = null
+    @Volatile private var chatNeedsHistory = false
+    private var chatMode = "team"
+    private val chatMessages = LinkedHashMap<String, JSONObject>()
+    private val renderedChatKeys = HashSet<String>()
+    private var assignedRideIds = listOf<String>()
+    private var assignedRideNames = listOf<String>()
+    private var selectedChatRide = ""
+    private var chatPendingSignature = ""
+    private var chatPendingId = ""
+    private var chatInitialHistoryLoaded = false
+    private val unreadChat = mutableMapOf("team" to 0, "dispatch" to 0, "rider" to 0)
     private var shownName = ""
     private var stage = "available"
     private var running = false
@@ -168,12 +184,31 @@ class MainActivity : Activity() {
         boardStatus = findViewById(R.id.boardStatus)
         openRides = findViewById(R.id.openRides)
         myRides = findViewById(R.id.myRides)
-        chatReplyHint = findViewById(R.id.chatReplyHint)
+        chatTabTeam = findViewById(R.id.chatTabTeam)
+        chatTabDispatch = findViewById(R.id.chatTabDispatch)
+        chatTabRider = findViewById(R.id.chatTabRider)
+        chatRecipientSummary = findViewById(R.id.chatRecipientSummary)
+        chatRideSelector = findViewById(R.id.chatRideSelector)
+        chatSendStatus = findViewById(R.id.chatSendStatus)
         chatLog = findViewById(R.id.chatLog)
         chatContent = findViewById(R.id.chatContent)
         chatText = findViewById(R.id.chatText)
-        chatPrivate = findViewById(R.id.chatPrivate)
         chatSend = findViewById(R.id.chatSend)
+        chatTabTeam.setOnClickListener { chooseChatMode("team") }
+        chatTabDispatch.setOnClickListener { chooseChatMode("dispatch") }
+        chatTabRider.setOnClickListener { chooseChatMode("rider") }
+        chatRideSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (chatMode != "rider" || position !in assignedRideIds.indices) return
+                val picked = assignedRideIds[position]
+                if (picked != selectedChatRide) {
+                    selectedChatRide = picked
+                    renderChatHistory(true)
+                }
+            }
+        }
+        updateChatControls()
 
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -219,9 +254,18 @@ class MainActivity : Activity() {
             if (shownName != name) {
                 shownName = name
                 chatSeen = 0.0
-                shownChatIds.clear()
-                chatReplyTarget = null
-                chatReplyHint.visibility = View.GONE
+                chatMessages.clear()
+                renderedChatKeys.clear()
+                assignedRideIds = emptyList()
+                assignedRideNames = emptyList()
+                selectedChatRide = ""
+                chatPendingSignature = ""
+                chatPendingId = ""
+                chatInitialHistoryLoaded = false
+                unreadChat.keys.toList().forEach { unreadChat[it] = 0 }
+                chatMode = "team"
+                chatNeedsHistory = false
+                updateChatControls()
                 ridesSignature = ""
                 chatContent.removeAllViews()
                 openRides.removeAllViews()
@@ -429,6 +473,7 @@ class MainActivity : Activity() {
 
     private fun renderRides(open: List<JSONObject>, mine: List<JSONObject>) {
         boardStatus.text = ""
+        updateChatRides(mine)
         val signature = signatureOf(open, mine)
         if (signature == ridesSignature) return
         ridesSignature = signature
@@ -784,31 +829,129 @@ class MainActivity : Activity() {
 
     // ---- team text -------------------------------------------------------
 
-    private fun refreshChat() {
+    // Chat updates only add content inside a fixed scroll region. They never
+    // navigate, open a modal, raise the keyboard, or scroll the driver's view.
+    private fun chooseChatMode(mode: String) {
+        if (mode !in listOf("team", "dispatch", "rider")) return
+        chatMode = mode
+        unreadChat[mode] = 0
+        updateChatControls()
+        renderChatHistory(true) // Explicit tap: permitted to show latest messages.
+    }
+
+    private fun updateChatRides(mine: List<JSONObject>) {
+        val next = mine.filter { it.optString("id").isNotBlank() }
+        val ids = next.map { it.optString("id") }
+        val labels = next.map { (it.optString("rider_name").ifBlank { "Ride" }) + " · " + it.optString("id") }
+        if (ids == assignedRideIds && labels == assignedRideNames) return
+        val previous = selectedChatRide
+        assignedRideIds = ids
+        assignedRideNames = labels
+        selectedChatRide = if (previous in ids) previous else ids.firstOrNull() ?: ""
+        updateChatControls()
+        if (previous != selectedChatRide && chatMode == "rider") renderChatHistory(false)
+        // A driver assigned to an existing ride needs messages older than their
+        // latest team-message timestamp. Always merge the full server history.
+        refreshChat(true)
+    }
+
+    private fun updateChatBadges() {
+        listOf(chatTabTeam to "team", chatTabDispatch to "dispatch", chatTabRider to "rider")
+            .forEach { (tab, mode) ->
+                val count = unreadChat[mode] ?: 0
+                val label = mode.replaceFirstChar { it.uppercase() }
+                tab.text = if (count > 0) "$label ${minOf(count, 99)}" else label
+                tab.isSelected = chatMode == mode
+                tab.alpha = if (chatMode == mode) 1.0f else 0.65f
+            }
+    }
+
+    private fun updateChatControls() {
+        updateChatBadges()
+        chatRecipientSummary.text = when (chatMode) {
+            "dispatch" -> "Private to Dispatch"
+            "rider" -> "Rider + Dispatch"
+            else -> "All drivers (Team)"
+        }
+        val labels = if (chatMode == "rider") assignedRideNames else
+            listOf(if (chatMode == "dispatch") "Dispatch only" else "All drivers")
+        val options = if (labels.isEmpty()) listOf("No assigned ride") else labels
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        chatRideSelector.adapter = adapter
+        chatRideSelector.isEnabled = chatMode == "rider" && assignedRideIds.isNotEmpty()
+        if (chatMode == "rider") {
+            val index = assignedRideIds.indexOf(selectedChatRide)
+            if (index >= 0) chatRideSelector.setSelection(index)
+        }
+        chatSend.isEnabled = !chatSending.get() && (chatMode != "rider" || selectedChatRide.isNotBlank())
+    }
+
+    private fun chatKey(message: JSONObject): String =
+        message.optString("message_kind", if (message.has("ride_id")) "ride" else "team") +
+            ":" + message.optString("id")
+
+    private fun matchesChat(message: JSONObject): Boolean = when (chatMode) {
+        "rider" -> selectedChatRide.isNotBlank() && message.optString("ride_id") == selectedChatRide
+        "dispatch" -> !message.has("ride_id") && message.optString("channel") == "private"
+        else -> !message.has("ride_id") && message.optString("channel") != "private"
+    }
+
+    private fun renderChatHistory(commanded: Boolean) {
+        val scroll = chatLog.scrollY
+        chatContent.removeAllViews()
+        renderedChatKeys.clear()
+        chatMessages.values.filter(::matchesChat).sortedBy { it.optDouble("at", 0.0) }
+            .forEach { message ->
+                renderedChatKeys.add(chatKey(message))
+                addChatBubble(message)
+            }
+        if (commanded) chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
+        else chatLog.post { chatLog.scrollTo(0, scroll) }
+    }
+
+    private fun refreshChat(full: Boolean = false) {
         val name = prefs.driverName
-        if (name.isBlank() || !chatBusy.compareAndSet(false, true)) return
-        val since = chatSeen
+        if (name.isBlank()) return
+        if (!chatBusy.compareAndSet(false, true)) {
+            if (full) chatNeedsHistory = true
+            return
+        }
+        val since = if (full) 0.0 else (chatSeen - 0.05).coerceAtLeast(0.0)
         io.execute {
             try {
-                val res = Api.get("/api/chat/messages?since=" + String.format(Locale.US, "%.3f", since))
-                val messages = res.optJSONArray("messages") ?: JSONArray()
-                val fresh = ArrayList<JSONObject>()
-                for (i in 0 until messages.length()) {
-                    val message = messages.optJSONObject(i) ?: continue
-                    val unique = message.optString("message_kind") + ":" + message.optString("id")
-                    if (!shownChatIds.add(unique)) continue
-                    val at = message.optDouble("at", 0.0)
-                    if (at > chatSeen) chatSeen = at
-                    fresh.add(message)
+                val res = Api.get("/api/chat/messages?since=" + String.format(Locale.US, "%.6f", since))
+                val items = res.optJSONArray("messages") ?: JSONArray()
+                val received = ArrayList<JSONObject>()
+                for (i in 0 until items.length()) {
+                    val message = items.optJSONObject(i) ?: continue
+                    received.add(message)
                 }
-                if (fresh.isNotEmpty()) runOnUiThread {
-                    fresh.forEach { addChatBubble(it) }
-                    chatLog.post { chatLog.fullScroll(View.FOCUS_DOWN) }
+                main.post {
+                    received.forEach { message ->
+                        val key = chatKey(message)
+                        chatSeen = maxOf(chatSeen, message.optDouble("at", 0.0))
+                        if (chatMessages.putIfAbsent(key, message) == null) {
+                            if (chatInitialHistoryLoaded && !message.optBoolean("mine")) {
+                                val tab = if (message.has("ride_id")) "rider" else
+                                    if (message.optString("channel") == "private") "dispatch" else "team"
+                                unreadChat[tab] = (unreadChat[tab] ?: 0) + 1
+                            }
+                            if (matchesChat(message) && renderedChatKeys.add(key)) addChatBubble(message)
+                        }
+                    }
+                    chatInitialHistoryLoaded = true
+                    updateChatBadges()
+                    // No fullScroll here: arriving texts must never move the view.
                 }
             } catch (ignored: Exception) {
-                // Chat is a side channel; the ride board already shows outages.
+                // The message remains in its compose field on send failure.
             } finally {
                 chatBusy.set(false)
+                if (chatNeedsHistory) {
+                    chatNeedsHistory = false
+                    main.post { refreshChat(true) }
+                }
             }
         }
     }
@@ -817,7 +960,7 @@ class MainActivity : Activity() {
         val from = message.optString("from")
         val mine = message.optBoolean("mine")
         val priv = message.optString("channel") == "private" ||
-            message.optString("audience") == "dispatch"
+            message.optString("audience") == "rider"
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = if (mine) Gravity.END else Gravity.START
@@ -858,56 +1001,7 @@ class MainActivity : Activity() {
             setTextColor(themedColor(R.attr.nrMuted)); textSize = 9f
         }
         bubble.addView(time); row.addView(bubble)
-        if (priv) {
-            android.animation.ObjectAnimator.ofFloat(bubble, "elevation", dp(2).toFloat(), dp(12).toFloat()).apply {
-                duration = 1250; repeatMode = android.animation.ValueAnimator.REVERSE
-                repeatCount = android.animation.ValueAnimator.INFINITE; start()
-            }
-        }
-        if (!mine) {
-            val reply = Button(this).apply {
-                setBackgroundResource(if (aeroActive) R.drawable.btn_aero_green else R.drawable.btn_outline_plum)
-                setTextColor(themedColor(R.attr.nrSecondaryButtonText))
-                minHeight = dp(40)
-                textSize = 12f
-                text = "Reply"; isAllCaps = false
-                setOnClickListener { beginChatReply(message) }
-            }
-            row.addView(reply)
-        }
         chatContent.addView(row)
-    }
-
-    private fun beginChatReply(message: JSONObject) {
-        val target = JSONObject()
-        val rideId = message.optString("ride_id")
-        val role = message.optString("role")
-        val label: String
-        if (rideId.isNotBlank()) {
-            target.put("ride_id", rideId)
-            target.put("audience", if (message.optString("audience") == "dispatch") "dispatch" else "shared")
-            label = "Replying in ride " + rideId + " — tap here to cancel"
-        } else if (role == "dispatch") {
-            target.put("private", true)
-            label = "Replying privately to Dispatch — tap here to cancel"
-        } else {
-            chatReplyTarget = null
-            chatReplyHint.visibility = View.GONE
-            chatPrivate.visibility = View.VISIBLE
-            chatText.hint = getString(R.string.chat_hint)
-            return
-        }
-        chatReplyTarget = target
-        chatReplyHint.text = label
-        chatReplyHint.visibility = View.VISIBLE
-        chatReplyHint.setOnClickListener {
-            chatReplyTarget = null; chatReplyHint.visibility = View.GONE
-            chatPrivate.visibility = View.VISIBLE; chatPrivate.isChecked = false
-            chatText.hint = getString(R.string.chat_hint)
-        }
-        chatPrivate.visibility = View.GONE
-        chatText.hint = getString(R.string.chat_hint)
-        chatText.requestFocus()
     }
 
     private fun sendChat() {
@@ -915,35 +1009,41 @@ class MainActivity : Activity() {
         if (name.isBlank()) return
         val text = chatText.text.toString().trim()
         if (text.isEmpty() || !chatSending.compareAndSet(false, true)) return
-        val body = JSONObject().put("text", text)
-        chatReplyTarget?.let { target ->
-            val keys = target.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                body.put(key, target.get(key))
-            }
+        if (chatMode == "rider" && selectedChatRide.isBlank()) {
+            chatSending.set(false)
+            return
         }
-        if (chatReplyTarget == null && chatPrivate.isChecked) body.put("private", true)
+        val body = JSONObject().put("text", text)
+        if (chatMode == "rider") {
+            body.put("ride_id", selectedChatRide)
+            body.put("audience", "shared")
+        } else if (chatMode == "dispatch") {
+            body.put("private", true)
+        }
+        val signature = chatMode + ":" + selectedChatRide + ":" + text
+        if (chatPendingSignature != signature) {
+            chatPendingSignature = signature
+            chatPendingId = UUID.randomUUID().toString()
+        }
+        body.put("client_id", chatPendingId)
         chatSend.isEnabled = false
         io.execute {
             try {
                 Api.post("/api/chat/messages", body)
                 main.post {
-                    chatText.setText("")
-                    chatSend.isEnabled = true
+                    if (chatText.text.toString().trim() == text) chatText.setText("")
+                    chatPendingSignature = ""
+                    chatPendingId = ""
+                    chatSendStatus.text = "Sent"
                     chatSending.set(false)
-                    chatReplyTarget = null
-                    chatReplyHint.visibility = View.GONE
-                    chatPrivate.visibility = View.VISIBLE
-                    chatPrivate.isChecked = false
-                    chatText.hint = getString(R.string.chat_hint)
+                    updateChatControls()
                     refreshChat()
                 }
             } catch (e: Exception) {
                 main.post {
-                    chatSend.isEnabled = true
+                    chatSendStatus.text = "Send failed — draft kept. Try again."
                     chatSending.set(false)
-                    boardStatus.text = getString(R.string.action_failed, friendly(e))
+                    updateChatControls()
                 }
             }
         }
