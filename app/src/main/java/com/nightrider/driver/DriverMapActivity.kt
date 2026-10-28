@@ -247,9 +247,11 @@ class DriverMapActivity : Activity(), LocationListener {
         // the navigation arrow and camera must ignore this unreliable fix.
         fieldTest?.onFix(value)
         if (!acceptsMapFix(value)) {
+            fieldTest?.onMapDecision(value.time, false)
             fieldTest?.onFilteredMapFix()
             return
         }
+        fieldTest?.onMapDecision(value.time, true)
         val old = location
         val destination = SimulationPoint(value.latitude, value.longitude)
         val derivedBearing = if (value.hasBearing() && value.hasSpeed() && value.speed >= 2f) {

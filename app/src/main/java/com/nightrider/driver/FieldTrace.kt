@@ -8,7 +8,9 @@ data class FieldFix(
     val lat: Double,
     val lon: Double,
     val accuracyMeters: Float,
-    val speedMetersPerSecond: Float
+    val speedMetersPerSecond: Float,
+    val provider: String = "unknown",
+    val mapDecision: String = "unrated"
 )
 
 class FieldTrace(private val limit: Int = 1500) {
@@ -36,6 +38,17 @@ class FieldTrace(private val limit: Int = 1500) {
         return true
     }
 
+    /**
+     * Mark only the exact raw sample corresponding to a processed location.
+     * Duplicate/out-of-order updates may be omitted from the bounded CSV.
+     */
+    fun markDecision(epochMs: Long, accepted: Boolean) {
+        val index = recorded.indexOfLast { it.epochMs == epochMs }
+        if (index >= 0) recorded[index] = recorded[index].copy(
+            mapDecision = if (accepted) "accepted" else "rejected"
+        )
+    }
+
     fun distanceMeters(): Double {
         var meters = 0.0
         for (i in 1 until recorded.size) {
@@ -51,11 +64,15 @@ class FieldTrace(private val limit: Int = 1500) {
     }
 
     fun csv(): String = buildString {
-        append("epoch_ms,latitude,longitude,accuracy_m,speed_mps\n")
+        append("epoch_ms,latitude,longitude,accuracy_m,speed_mps,provider,map_decision\n")
         for (s in recorded) {
             append(s.epochMs).append(',').append(s.lat).append(',').append(s.lon)
                 .append(',').append(s.accuracyMeters).append(',')
-                .append(s.speedMetersPerSecond).append('\n')
+                .append(s.speedMetersPerSecond).append(',')
+                .append(s.provider.takeIf { it in setOf("gps", "network", "fused", "passive") }
+                    ?: "unknown").append(',')
+                .append(s.mapDecision.takeIf { it in setOf("accepted", "rejected") }
+                    ?: "unrated").append('\n')
         }
     }
 }
