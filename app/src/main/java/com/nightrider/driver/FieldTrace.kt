@@ -10,7 +10,11 @@ data class FieldFix(
     val accuracyMeters: Float,
     val speedMetersPerSecond: Float,
     val provider: String = "unknown",
-    val mapDecision: String = "unrated"
+    val mapDecision: String = "unrated",
+    val fusionHeadingDeg: Double? = null,
+    val gyroYawDps: Double? = null,
+    val linearAccelerationMps2: Double? = null,
+    val phoneAzimuthDeg: Double? = null
 )
 
 class FieldTrace(private val limit: Int = 1500) {
@@ -49,6 +53,18 @@ class FieldTrace(private val limit: Int = 1500) {
         )
     }
 
+    /** Attach a local inertial snapshot to exactly one already-recorded raw fix. */
+    fun markMotion(epochMs: Long, snapshot: FieldMotionSnapshot?) {
+        if (snapshot == null) return
+        val index = recorded.indexOfLast { it.epochMs == epochMs }
+        if (index >= 0) recorded[index] = recorded[index].copy(
+            fusionHeadingDeg = snapshot.headingDeg?.takeIf { it.isFinite() },
+            gyroYawDps = snapshot.yawRateDps?.takeIf { it.isFinite() },
+            linearAccelerationMps2 = snapshot.linearAccelerationMps2?.takeIf { it.isFinite() },
+            phoneAzimuthDeg = snapshot.phoneAzimuthDeg?.takeIf { it.isFinite() }
+        )
+    }
+
     fun distanceMeters(): Double {
         var meters = 0.0
         for (i in 1 until recorded.size) {
@@ -64,7 +80,8 @@ class FieldTrace(private val limit: Int = 1500) {
     }
 
     fun csv(): String = buildString {
-        append("epoch_ms,latitude,longitude,accuracy_m,speed_mps,provider,map_decision\n")
+        append("epoch_ms,latitude,longitude,accuracy_m,speed_mps,provider,map_decision," +
+            "fusion_heading_deg,gyro_yaw_dps,linear_accel_mps2,phone_azimuth_deg\n")
         for (s in recorded) {
             append(s.epochMs).append(',').append(s.lat).append(',').append(s.lon)
                 .append(',').append(s.accuracyMeters).append(',')
@@ -72,7 +89,12 @@ class FieldTrace(private val limit: Int = 1500) {
                 .append(s.provider.takeIf { it in setOf("gps", "network", "fused", "passive") }
                     ?: "unknown").append(',')
                 .append(s.mapDecision.takeIf { it in setOf("accepted", "rejected") }
-                    ?: "unrated").append('\n')
+                    ?: "unrated")
+                .append(',').append(s.fusionHeadingDeg ?: "")
+                .append(',').append(s.gyroYawDps ?: "")
+                .append(',').append(s.linearAccelerationMps2 ?: "")
+                .append(',').append(s.phoneAzimuthDeg ?: "")
+                .append('\n')
         }
     }
 }
