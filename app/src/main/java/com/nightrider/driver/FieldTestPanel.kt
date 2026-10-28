@@ -250,6 +250,12 @@ class FieldTestPanel(
         render()
     }
 
+    fun videoExported() {
+        videoReady = false
+        videoMessage = "MP4 saved. Save matching CSV if you haven't yet."
+        render()
+    }
+
     fun isVideoRunning(): Boolean = videoRecording
 
     fun isVideoReady(): Boolean = videoReady
