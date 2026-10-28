@@ -1013,8 +1013,6 @@ class MainActivity : Activity() {
             chatSending.set(false)
             return
         }
-        val originalMode = chatMode
-        val originalRide = selectedChatRide
         val body = JSONObject().put("text", text)
         if (chatMode == "rider") {
             body.put("ride_id", selectedChatRide)
