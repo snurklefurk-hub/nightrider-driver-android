@@ -209,3 +209,42 @@ cannot independently prove visual smoothness.
 Keep any exported precise-location traces private; they are never transmitted
 to NightRider servers automatically. Use the Field Test only as a passenger
 or with no interaction while driving.
+
+
+## Opt-in motion-sensor fusion in Field Test
+
+This experimental mode is **OFF by default**. Before driving, secure the
+phone to a rigid mount, open **Settings → Driver Map Field Test**, and tap
+**Motion fusion: OFF** to turn it on. Keep the phone fixed relative to the
+car until the run ends. Do not operate the screen while driving. The feature
+is intentionally unavailable in live rides and the deterministic simulator.
+
+The phone samples gyroscope, accelerometer and gravity data while the Field
+Test screen is foregrounded. When available, Android's rotation vector is
+recorded only as a **phone-orientation diagnostic**, never as uncalibrated car
+heading. Gyro yaw is projected onto the measured gravity axis so upright and
+flat mounts work without special orientation settings. Once a *valid moving*
+GPS course (>=3m/s) anchors the heading, sensor yaw updates the heading-up
+camera between location fixes. Estimates expire after 8s without fresh
+qualified GPS course, or 1s without a gyroscope update. At very low speed
+we fall back to ordinary GPS behavior. No inertial dead-reckoning of position,
+voice prompts, premium services, network uploads, or new permissions.
+
+The GPS quality gate, route calculations, recorded raw locations and
+display-position smoother remain unchanged. This is an experimental camera
+heading assist, **not** turn-by-turn navigation. Moving the phone or
+magnetic interference can distort the sensor estimates.
+
+Field Test's info panel shows motion-sensor availability, fused heading,
+turn rate and acceleration. New CSV exports append four optional columns
+after the original seven: `fusion_heading_deg`, `gyro_yaw_dps`,
+`linear_accel_mps2` and `phone_azimuth_deg`. Blank fields mean
+disabled/unavailable/not yet GPS-calibrated. The browser Map Lab supports
+legacy five/seven-column CSVs as well as this eleven-column format. Traces
+remain local and are only exported by explicit tap.
+
+**Suggested test:** while parked, toggle the feature on and record. Have
+a passenger observe the compass/heading during a short controlled turn or
+U-turn, then stop, save the CSV and report whether the map turned earlier
+without snapping or lagging. Compare a run with the toggle OFF if practical.
+Do not make route decisions from the experimental navigation view.
