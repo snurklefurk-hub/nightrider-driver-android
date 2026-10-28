@@ -248,3 +248,41 @@ a passenger observe the compass/heading during a short controlled turn or
 U-turn, then stop, save the CSV and report whether the map turned earlier
 without snapping or lagging. Compare a run with the toggle OFF if practical.
 Do not make route decisions from the experimental navigation view.
+
+
+## Paired screen video + GPS Field Test (opt-in)
+
+Field Test now has a **Record screen + GPS** button that begins one explicitly
+consented Android MediaProjection capture and one synchronized raw GPS trace.
+No other screen uses this feature. To run it safely, park first, secure the phone,
+open Settings → Driver Map Field Test, choose the map destination if useful,
+enable experimental Motion Fusion if desired, and tap Record screen + GPS.
+
+Android asks for screen recording permission **every time**. Select
+**A single app → NightRider** when offered to avoid recording other apps.
+Only after consent and successful video encoder start does NightRider clear and
+begin the paired GPS trace. The Field Test panel shows a visible recording
+indicator, a local `SYNC epoch_ms` clock updated on screen, and the encoder
+start epoch timestamp. Use the clock on the video to match samples in the CSV
+with onscreen camera/arrow jumps. The video has **no microphone or app audio**.
+
+To finish, safely park, tap **Stop screen + GPS** (or the notification Stop
+action). Wait until the panel says **MP4 ready**. Tap **Save CSV** and
+**Save MP4**; choose a folder for each in Android's document picker. The two
+files share a basename `nightrider-field-<epoch_ms>`, with `.csv` and
+`.mp4` suffixes. The raw CSV schema remains the established eleven columns
+and can still be imported in Web Map Lab; no server side changes are needed.
+
+The MP4 is initially held in NightRider's app-private, non-backed-up files
+directory. The app **never uploads it**. Video is capped at ten minutes and
+250 MiB, encoded as H.264 in an MP4 at approximately 15 fps without audio.
+System screen-capture controls, locking the screen, or foreground loss can end
+a recording. The foreground service displays an ongoing recording notification
+with an explicit Stop action; the Android 14 media-projection FGS permission and
+one-use capture token are required. Never assume capture started until the
+Field Test panel confirms that it is recording. Keep the phone securely mounted
+and do not interact with the app while driving.
+
+The recording can show private locations, notifications, or account information
+if you share the whole screen: review it before sharing. The tool is for
+observational debugging; recorded footage is not a driving/navigation aid.
