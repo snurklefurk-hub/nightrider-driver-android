@@ -274,7 +274,9 @@ files share a basename `nightrider-field-<epoch_ms>`, with `.csv` and
 and can still be imported in Web Map Lab; no server side changes are needed.
 
 The MP4 is initially held in NightRider's app-private, non-backed-up files
-directory. The app **never uploads it**. Video is capped at ten minutes and
+directory. The app **never uploads it**. After successful MP4 export,
+NightRider deletes its internal temporary video file; save the paired CSV
+before clearing or starting another trace. Video is capped at ten minutes and
 250 MiB, encoded as H.264 in an MP4 at approximately 15 fps without audio.
 System screen-capture controls, locking the screen, or foreground loss can end
 a recording. The foreground service displays an ongoing recording notification
