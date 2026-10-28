@@ -43,7 +43,7 @@ class NavigationHud(
             elevation = dp(4).toFloat()
         }
         top.addView(button("‹", onBack, true), LinearLayout.LayoutParams(dp(38), dp(64)))
-        top.addView(text("➤", 35f, Color.WHITE, true).apply { gravity = Gravity.CENTER },
+        top.addView(text("▲", 35f, Color.WHITE, true).apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(dp(42), dp(64)))
         val textColumn = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         textColumn.addView(heading)
