@@ -288,3 +288,6 @@ and do not interact with the app while driving.
 The recording can show private locations, notifications, or account information
 if you share the whole screen: review it before sharing. The tool is for
 observational debugging; recorded footage is not a driving/navigation aid.
+
+## Vela transition
+The simulator and screen-recording Field Test described here are now labeled Legacy in Settings. The main map button uses Vela-powered navigation; its separate Vela navigation test is documented in NAVIGATION-VELA.md.

@@ -83,6 +83,9 @@ class SettingsActivity : Activity() {
             }
         }
         close.setOnClickListener { finish() }
+        findViewById<Button>(R.id.velaNavTest).setOnClickListener {
+            startActivity(Intent(this, VelaNavigationActivity::class.java).putExtra("test", true))
+        }
         findViewById<Button>(R.id.mapSimulator).setOnClickListener {
             startActivity(Intent(this, DriverMapActivity::class.java).putExtra("simulation", true))
         }

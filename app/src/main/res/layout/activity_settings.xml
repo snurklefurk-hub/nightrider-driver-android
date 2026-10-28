@@ -119,12 +119,20 @@
             android:visibility="gone" />
 
         <Button
+            android:id="@+id/velaNavTest"
+            style="@style/NrButton.Alt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Vela navigation test (live GPS)" />
+
+        <Button
             android:id="@+id/mapSimulator"
             style="@style/NrButton.Alt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Map simulator" />
+            android:text="Legacy map simulator" />
 
         <Button
             android:id="@+id/mapFieldTest"
@@ -132,7 +140,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Field test (live GPS)" />
+            android:text="Legacy field test (screen recording)" />
 
         <CheckBox
             android:id="@+id/keepAwake"

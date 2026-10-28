@@ -214,7 +214,7 @@ class MainActivity : Activity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         findViewById<Button>(R.id.driverMapButton).setOnClickListener {
-            startActivity(Intent(this, DriverMapActivity::class.java))
+            startActivity(Intent(this, VelaNavigationActivity::class.java))
         }
         loginButton.setOnClickListener { attemptLogin() }
         passInput.setOnEditorActionListener { _, actionId, _ ->

@@ -11,6 +11,7 @@ android {
         applicationId "com.nightrider.driver"
         minSdk 26
         targetSdk 34
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         versionCode = Integer.parseInt((project.findProperty('nrVersionCode') ?: '1').toString())
         versionName = (project.findProperty('nrVersionName') ?: '1.0').toString()
     }
@@ -59,4 +60,13 @@ android {
 dependencies {
     implementation 'org.maplibre.gl:android-sdk:13.6.1'
     testImplementation 'junit:junit:4.13.2'
+}
+
+dependencies { implementation project(':vela-engine') }
+
+dependencies { testImplementation 'org.json:json:20240303' }
+
+dependencies {
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'junit:junit:4.13.2'
 }

@@ -15,3 +15,8 @@ __pycache__/
 # build output
 build.log
 out/
+
+# Focused Vela module and local validation logs
+/vela-engine/build/
+/vela-build*.log
+/vela-emulator.log
