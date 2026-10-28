@@ -125,3 +125,31 @@ Road-test checklist (park to interact, or let a passenger operate the device):
 4. In Field Test, record GPS while safely driving; inspect the map without
    interacting, export CSV once parked, then review it in Web Map Lab.
 5. Confirm no false turn banners, audio, or live ride/dispatch changes.
+
+## Raw GPS vs navigation GPS (field trace feedback)
+
+A real phone Field Test trace exposed intermittent, highly inaccurate fixes
+(roughly 64–400m accuracy, including recurring positions) among usable GPS
+readings. These can make the vehicle marker appear to teleport despite otherwise
+smooth driving.
+
+NightRider now records **all** raw Field Test readings as before, including
+ones that are too unreliable to drive the camera. The navigation marker,
+heading-up camera, Field Test route-offset diagnostic, and new last-known fix
+selection use a separate local quality gate:
+
+- Require valid coordinates, timestamp no older than 20 seconds, and reported
+  horizontal accuracy within 35 meters.
+- Ignore non-monotonic timestamps and physically implausible jumps (>55m/s
+  between two fixes).
+- Prefer a fresh GPS fix over a newly arriving NETWORK-provider fix for 12
+  seconds. An accurate network fix can still be used when GPS goes stale.
+- Field Test diagnostics show how many incoming fixes the map ignored.
+  Recordings keep the full raw stream to investigate GPS/network problems.
+
+This is **not** map matching or a guarantee of lane-level accuracy. In a long
+GPS outage, the location marker can become stale until a credible fix arrives.
+The test route and live dispatch behavior are otherwise unchanged. To validate
+on a second road test, compare the new ignored-fix count with the raw CSV and
+watch whether the arrow avoids sudden jumps; perform any interactions only while
+parked or with a passenger operating the test.
