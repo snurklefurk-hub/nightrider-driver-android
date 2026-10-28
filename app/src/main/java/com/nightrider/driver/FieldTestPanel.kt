@@ -23,13 +23,19 @@ import java.util.Locale
 class FieldTestPanel(
     private val activity: Activity,
     private val changed: () -> Unit,
-    private val routeRequested: () -> Unit
+    private val routeRequested: () -> Unit,
+    private val motionChanged: (Boolean) -> Boolean
 ) {
     val trace = FieldTrace()
     var destination: LatLng? = null
         private set
     var follow = true
         private set
+    var motionEnabled = false
+        private set
+    private var motionAvailability = "Checking motion sensors…"
+    private var motionSnapshot: FieldMotionSnapshot? = null
+    private val motionButton = Button(activity)
     private var latest: Location? = null
     private var filteredMapFixes = 0
     private val recordButton = Button(activity)
@@ -62,6 +68,10 @@ class FieldTestPanel(
             render(); changed()
         }
         followButton.setOnClickListener { setFollow(!follow) }
+        motionButton.setOnClickListener {
+            motionEnabled = motionChanged(!motionEnabled)
+            render()
+        }
         val routeButton = Button(activity).apply {
             text = "Route again"
             setOnClickListener { if (destination != null) routeRequested() }
@@ -84,13 +94,14 @@ class FieldTestPanel(
             }
         }
         panel.addView(row(recordButton, followButton))
+        panel.addView(row(motionButton))
         panel.addView(row(routeButton, clearButton))
         panel.addView(row(saveButton, shareButton, clearTraceButton))
         diagnostics.textSize = 12f
         panel.addView(diagnostics)
         view = ScrollView(activity).apply {
             addView(panel)
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(212))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(255))
         }
         render()
     }
@@ -137,6 +148,12 @@ class FieldTestPanel(
 
     fun trail(): List<LatLng> = trace.samples.map { LatLng(it.lat, it.lon) }
 
+    fun reportMotion(availability: String, snapshot: FieldMotionSnapshot?) {
+        motionAvailability = availability
+        motionSnapshot = snapshot
+        render()
+    }
+
     fun refreshDiagnostics() = render()
 
     fun pause() {
@@ -148,6 +165,8 @@ class FieldTestPanel(
     private fun render() {
         recordButton.text = if (trace.recording) "Stop recording" else "Record new trace"
         followButton.text = if (follow) "Follow: ON" else "Follow: OFF"
+        motionButton.text = if (motionEnabled) "Motion fusion: ON · experimental"
+            else "Motion fusion: OFF · tap when parked"
         shareButton.isEnabled = trace.samples.isNotEmpty()
         saveButton.isEnabled = trace.samples.isNotEmpty()
         val fix = latest
@@ -165,7 +184,19 @@ class FieldTestPanel(
             String.format(Locale.US, "%.2f", trace.distanceMeters() / 1609.344) +
             " mi traced (estimate) · " + (if (destination == null) "No test pin" else "Test pin set") +
             "\nMap ignored " + filteredMapFixes +
-            " unreliable fixes · CSV keeps raw readings"
+            " unreliable fixes · CSV keeps raw readings" +
+            "\nSensors: " + motionAvailability + " · " +
+            (if (!motionEnabled) "OFF" else {
+                val snapshot = motionSnapshot
+                if (snapshot?.headingDeg == null) "Waiting for moving GPS course"
+                else "Heading " + String.format(Locale.US, "%.0f°", snapshot.headingDeg)
+            }) +
+            (motionSnapshot?.yawRateDps?.let {
+                " · Turn " + String.format(Locale.US, "%+.0f°/s", it)
+            } ?: "") +
+            (motionSnapshot?.linearAccelerationMps2?.let {
+                " · Motion " + String.format(Locale.US, "%.1f m/s²", it)
+            } ?: "")
     }
 
     private fun saveToFile() {
