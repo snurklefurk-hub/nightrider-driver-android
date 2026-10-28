@@ -26,6 +26,20 @@ class FieldModeChecks(unittest.TestCase):
         self.assertIn("if (simulation != null) simulation!!.resume()", source.replace(
             "simulation != null -> simulation!!.resume()", "if (simulation != null) simulation!!.resume()"))
 
+    def test_raw_trace_survives_rejected_navigation_fix(self):
+        activity = (SRC / "DriverMapActivity.kt").read_text()
+        panel = (SRC / "FieldTestPanel.kt").read_text()
+        quality = (SRC / "NavigationFixFilter.kt").read_text()
+        self.assertIn("fieldTest?.onFix(value)", activity)
+        self.assertIn("if (!acceptsMapFix(value))", activity)
+        self.assertIn("fieldTest?.onFilteredMapFix()", activity)
+        self.assertIn("NavigationFixFilter.accepts(", activity)
+        self.assertIn("NavigationFixFilter.MAX_AGE_MS", quality.replace(
+            "const val MAX_AGE_MS", "NavigationFixFilter.MAX_AGE_MS"))
+        self.assertIn("raw readings", panel)
+        self.assertNotIn("Api.", quality)
+        self.assertNotIn("HttpURLConnection", quality)
+
     def test_settings_exposes_opt_in_field_test(self):
         settings = (SRC / "SettingsActivity.kt").read_text()
         layout = (ROOT / "app/src/main/res/layout/activity_settings.xml").read_text()
