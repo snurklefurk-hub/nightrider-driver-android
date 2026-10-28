@@ -34,8 +34,7 @@ class FieldModeChecks(unittest.TestCase):
         self.assertIn("if (!acceptsMapFix(value))", activity)
         self.assertIn("fieldTest?.onFilteredMapFix()", activity)
         self.assertIn("NavigationFixFilter.accepts(", activity)
-        self.assertIn("NavigationFixFilter.MAX_AGE_MS", quality.replace(
-            "const val MAX_AGE_MS", "NavigationFixFilter.MAX_AGE_MS"))
+        self.assertIn("const val MAX_AGE_MS", quality)
         self.assertIn("raw readings", panel)
         self.assertNotIn("Api.", quality)
         self.assertNotIn("HttpURLConnection", quality)
