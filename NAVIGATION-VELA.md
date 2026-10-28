@@ -53,3 +53,10 @@ roundabouts, lane display and poor-network recovery require drive testing. The f
 shows text instructions and next-turn distance, not Vela's full maneuver/lane artwork.
 The legacy Field Test remains solely as a comparison tool. No on-road validation is implied
 by successful builds or emulator tests.
+
+## NightRider map appearance
+The Vela screen applies the existing NavigationRoadStyle paint overrides to Fiord (LIGHT)
+and Dark (DARK): road contrast, water/land/building colors, street-label halos and subdued
+secondary place labels. VelaMapAppearance restores the approved blue route and dark outline
+using the unchanged route points. Existing NightRider interface colors and driver arrow remain.
+This renderer has no GPS, routing, guidance, camera or ride-state logic.
