@@ -23,27 +23,27 @@ class NavigationHud(
     onBack: () -> Unit,
     onRecenter: () -> Unit
 ) {
-    private val banner = if (light) Color.rgb(0, 112, 107) else Color.rgb(31, 33, 37)
-    private val bottom = if (light) Color.rgb(238, 250, 255) else Color.rgb(27, 29, 34)
+    private val banner = if (light) Color.rgb(0, 113, 108) else Color.rgb(36, 37, 41)
+    private val bottom = if (light) Color.rgb(238, 250, 255) else Color.rgb(26, 27, 31)
     private val bottomText = if (light) Color.rgb(23, 48, 64) else Color.WHITE
     private val secondary = if (light) Color.rgb(70, 98, 113) else Color.rgb(182, 193, 201)
     val view = FrameLayout(activity)
-    private val heading = text("", 23f, Color.WHITE, true)
-    private val detail = text("", 12f, Color.WHITE, false)
-    private val summary = text("", 23f, bottomText, true)
-    private val speed = text("", 14f, bottomText, true)
+    private val heading = text("", 27f, Color.WHITE, true)
+    private val detail = text("", 13f, Color.WHITE, false)
+    private val summary = text("", 27f, bottomText, true)
+    private val speed = text("", 16f, bottomText, true)
     val status = text("", 12f, secondary, false)
 
     init {
         val top = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(12), dp(14), dp(12))
-            background = shape(banner, 17f)
+            setPadding(dp(8), dp(15), dp(14), dp(15))
+            background = shape(banner, 14f)
             elevation = dp(4).toFloat()
         }
         top.addView(button("‹", onBack, true), LinearLayout.LayoutParams(dp(38), dp(64)))
-        top.addView(text("↑", 33f, Color.WHITE, true).apply { gravity = Gravity.CENTER },
+        top.addView(text("➤", 35f, Color.WHITE, true).apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(dp(42), dp(64)))
         val textColumn = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         textColumn.addView(heading)
@@ -51,12 +51,12 @@ class NavigationHud(
         top.addView(textColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val topParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP
-        ).apply { setMargins(dp(12), dp(12), dp(12), 0) }
+        ).apply { setMargins(dp(10), dp(10), dp(10), 0) }
         view.addView(top, topParams)
 
         val lower = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(10), dp(12), dp(12))
+            setPadding(dp(18), dp(12), dp(12), dp(14))
             background = shape(bottom, 19f)
             elevation = dp(4).toFloat()
         }
@@ -72,7 +72,7 @@ class NavigationHud(
         lower.addView(status)
         val bottomParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM
-        ).apply { setMargins(dp(12), 0, dp(12), dp(12)) }
+        ).apply { setMargins(dp(10), 0, dp(10), dp(10)) }
         view.addView(lower, bottomParams)
     }
 
@@ -89,7 +89,7 @@ class NavigationHud(
         text = label; textSize = 25f; isAllCaps = false; minWidth = 0; minimumWidth = 0
         setPadding(0, 0, 0, 0)
         setTextColor(if (top) Color.WHITE else bottomText)
-        background = shape(if (top) banner else if (bottom == Color.rgb(27,29,34)) Color.rgb(49,52,58) else Color.rgb(214,232,241), 12f)
+        background = shape(if (top) banner else if (bottom == Color.rgb(26,27,31)) Color.rgb(49,52,58) else Color.rgb(214,232,241), 12f)
         setOnClickListener { action() }
         contentDescription = if (top) "Back" else "Recenter navigation map"
     }
