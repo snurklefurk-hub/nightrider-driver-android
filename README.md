@@ -104,6 +104,12 @@ The old simulator and screen-recording Field Test are explicitly labeled **Legac
 and remain available for comparing earlier GPS evidence. They are not the new navigation screen.
 See [NAVIGATION-VELA.md](NAVIGATION-VELA.md) for provenance, boundaries and validation.
 
+## Next implementation priorities
+
+The shared [NightRider roadmap](https://github.com/snurklefurk-hub/NightRider/blob/main/ROADMAP.md)
+records the proposed navigation lifecycle, safe trip-action and field-validation work.
+These are planned changes, not capabilities of the current signed release.
+
 ## Build from source
 
 The Android workflows install Java 17 and Gradle 8.7. Android Studio is
@@ -112,7 +118,10 @@ appearance preview use the pinned MapLibre Android SDK.
 
 Run `python -m unittest discover -s tests -p 'test_*.py' -v` for source/package
 checks and `gradle :vela-engine:test testDebugUnitTest assembleDebug` for the Kotlin unit tests
-and development APK. The signed-release workflow also runs the source and
+and development APK. On Windows without a POSIX `sh`, the shell-only commit-hook
+test is explicitly skipped; Linux CI still runs it. The native Vela screen check
+also runs for shared app source/resources and root build configuration changes.
+The signed-release workflow also runs the source and
 Kotlin checks before building an update.
 
 ## Permissions
