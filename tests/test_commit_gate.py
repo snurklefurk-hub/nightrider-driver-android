@@ -1,6 +1,8 @@
 """Keep the owner-approved NightRider commit questions and enforcement synchronized."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import os
+import shutil
 import subprocess
 import unittest
 
@@ -30,6 +32,8 @@ class CommitGatePolicyTests(unittest.TestCase):
         self.assertIn("safety|customer-trust|industry", workflow)
         self.assertNotIn("safety|driver-business|customer-trust", workflow)
 
+    @unittest.skipIf(os.name == "nt" and shutil.which("sh") is None,
+                     "POSIX shell is unavailable on this Windows installation")
     def test_local_commit_hook_validates_current_categories(self):
         hook = ROOT / ".githooks/commit-msg"
         subprocess.run(["sh", "-n", str(hook)], check=True, capture_output=True)

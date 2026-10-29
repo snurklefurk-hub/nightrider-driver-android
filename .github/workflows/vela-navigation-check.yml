@@ -5,10 +5,13 @@ on:
   pull_request:
     paths:
       - 'vela-engine/**'
-      - 'app/src/main/java/com/nightrider/driver/Vela*.kt'
+      - 'app/src/main/**'
+      - 'app/src/test/**'
       - 'app/src/androidTest/**'
-      - 'app/src/main/AndroidManifest.xml'
       - 'app/build.gradle'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
       - '.github/workflows/vela-navigation-check.yml'
 
 permissions:
