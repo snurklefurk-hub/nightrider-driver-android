@@ -1,13 +1,21 @@
 # NightRider Driver for Android
 
-The NightRider Driver app is for drivers. It connects to the NightRider service
-at `https://nightrider.onrender.com` and shares rides and team messages with the
-website.
+**NightRider is work-in-progress software only. No transportation services are
+currently offered; all rides and payments are simulated.** Friends, family,
+drivers, riders, and anyone interested can explore the test features.
 
-Drivers sign in with their NightRider username and password. Dispatch creates
-driver accounts and gives each driver their sign-in details privately. The app
-stores only an encrypted session token in Android Keystore; it does not save the
-password. Riders and dispatch use the website.
+The NightRider Driver Android app connects to the software demo at
+`https://nightrider.onrender.com` and shares simulated trips and team messages
+with the website. To explore the Driver role, sign in using the public test
+username `DEMO` and password `PASSWORD`. The same test credentials work for
+Rider and restricted Dispatch roles when selected on the web sign-in page.
+**Use fictional trip and message data only; demo accounts are shared.**
+
+Private driver accounts, when configured by an administrator, can still sign in
+with their own credentials. The Android app stores an encrypted session token
+using Android Keystore; it does not retain the password. Rider and Dispatch
+workflows are available in the browser. Public Rider account registration is
+paused while NightRider remains a software demo.
 
 ## The NightRider three-test commit rule
 
