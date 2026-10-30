@@ -1,13 +1,14 @@
 """Source-package checks that run without an Android SDK or built APK."""
 
 import os
+import hashlib
 import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 
-# launcher icon PNG dimensions per density (square and round share a size)
+# Launcher icon sizes are rendered by Android's launcher from approved source artwork.
 DENSITIES = {
     "mdpi": 48,
     "hdpi": 72,
@@ -19,17 +20,6 @@ DENSITIES = {
 
 def p(*parts):
     return os.path.join(ROOT, *parts)
-
-
-def png_size(data):
-    """Return (width, height) from a PNG byte string, or raise ValueError."""
-    if data[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("not a PNG")
-    if data[12:16] != b"IHDR":
-        raise ValueError("missing IHDR")
-    width, height = (int.from_bytes(data[16:20], "big"),
-                     int.from_bytes(data[20:24], "big"))
-    return width, height
 
 
 class ManifestTests(unittest.TestCase):
@@ -102,27 +92,42 @@ class LauncherIconTests(unittest.TestCase):
     def test_square_adaptive_icon_wiring(self):
         bg, fg = self._adaptive("ic_launcher.xml")
         self.assertEqual(bg, "@drawable/ic_launcher_background")
-        self.assertEqual(fg, "@drawable/ic_launcher_foreground")
+        self.assertEqual(fg, "@drawable/nightrider_launcher_foreground")
 
     def test_round_adaptive_icon_wiring(self):
         bg, fg = self._adaptive("ic_launcher_round.xml")
         self.assertEqual(bg, "@drawable/ic_launcher_background")
-        self.assertEqual(fg, "@drawable/ic_launcher_foreground")
+        self.assertEqual(fg, "@drawable/nightrider_launcher_foreground")
 
     def test_foreground_and_background_are_valid_xml(self):
-        for name in ("ic_launcher_foreground.xml", "ic_launcher_background.xml"):
+        for name in ("ic_launcher_foreground.xml", "ic_launcher_background.xml",
+                     "nightrider_launcher_foreground.xml"):
             ET.parse(p("app", "src", "main", "res", "drawable", name))
 
-    def test_png_mipmaps_exist_at_every_density(self):
-        for density, size in DENSITIES.items():
+    def test_approved_art_is_used_in_legacy_and_adaptive_launchers(self):
+        expected_sha = "fe4db1fd862d15338a1edb2a11a83442cb33477285397757f0655afecc0ea8c4"
+        paths = [p("app", "src", "main", "res", "drawable-nodpi", "nightrider_icon.webp")]
+        for density in DENSITIES:
             for stem in ("ic_launcher", "ic_launcher_round"):
-                path = p("app", "src", "main", "res", "mipmap-" + density,
-                         stem + ".png")
-                self.assertTrue(os.path.isfile(path), path)
-                with open(path, "rb") as fh:
-                    data = fh.read()
-                self.assertEqual(png_size(data), (size, size),
-                                 "%s/%s.png" % (density, stem))
+                paths.append(p("app", "src", "main", "res",
+                               "mipmap-" + density, stem + ".webp"))
+        for path in paths:
+            self.assertTrue(os.path.isfile(path), path)
+            with open(path, "rb") as fh:
+                data = fh.read()
+            self.assertEqual(data[:4], b"RIFF")
+            self.assertEqual(data[8:12], b"WEBP")
+            self.assertEqual(hashlib.sha256(data).hexdigest(), expected_sha)
+
+    def test_adaptive_foreground_insets_the_approved_icon(self):
+        root = ET.parse(p("app", "src", "main", "res", "drawable",
+                          "nightrider_launcher_foreground.xml")).getroot()
+        self.assertEqual(root.tag, "inset")
+        for side in ("Left", "Right", "Top", "Bottom"):
+            self.assertEqual(root.get(ANDROID + "inset" + side), "18dp")
+        bitmap = root.find("bitmap")
+        self.assertIsNotNone(bitmap)
+        self.assertEqual(bitmap.get(ANDROID + "src"), "@drawable/nightrider_icon")
 
 
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep the approved full square artwork safely inset inside Android's adaptive icon mask. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="18dp" android:insetTop="18dp"
+    android:insetRight="18dp" android:insetBottom="18dp">
+    <bitmap android:src="@drawable/nightrider_icon" android:gravity="fill" />
+</inset>
