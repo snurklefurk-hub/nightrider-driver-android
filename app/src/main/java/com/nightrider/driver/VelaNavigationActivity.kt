@@ -104,6 +104,7 @@ class VelaNavigationActivity : Activity(), LocationListener {
             updatePaletteLabel()
             palette.setOnClickListener {
                 prefs.aeroEnabled = !prefs.aeroEnabled
+                FieldScreenRecorderService.telemetry?.event("palette",JSONObject().put("light",prefs.aeroEnabled))
                 updatePaletteLabel()
                 val m = map ?: return@setOnClickListener
                 m.setStyle(if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"

@@ -125,8 +125,10 @@ class FieldScreenRecorderService : Service() {
         try {
             // Android 14+: consent must precede starting this FGS type;
             // the foreground state must precede getMediaProjection().
-            startForeground(NOTIFICATION_ID, notification(),
+            if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification(),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+            else startForeground(NOTIFICATION_ID, notification())
+            check(noBackupFilesDir.usableSpace > 350L * 1024 * 1024) { "At least 350 MB free storage is required" }
             @Suppress("DEPRECATION")
             val consent = if (Build.VERSION.SDK_INT >= 33)
                 intent.getParcelableExtra(EXTRA_PERMISSION, Intent::class.java)
@@ -210,6 +212,7 @@ class FieldScreenRecorderService : Service() {
         } catch (_: RuntimeException) {
             validVideo = false
         }
+        val diagnosticFailure = telemetry?.failure
         telemetry?.event("video_stop")
         telemetry?.close(if (keepError || !validVideo) "capture_error" else "capture_stopped")
         telemetry = null
@@ -231,8 +234,8 @@ class FieldScreenRecorderService : Service() {
             if (!keepError) state = RecordingState(Phase.ERROR,
                 old.sessionId, old.startedEpochMs, "Video could not be finalized.")
         } else {
-            state = RecordingState(Phase.READY, old.sessionId, old.startedEpochMs,
-                "Screen video ready to save")
+            state = RecordingState(if (diagnosticFailure == null) Phase.READY else Phase.ERROR, old.sessionId, old.startedEpochMs,
+                diagnosticFailure ?: "Screen video and diagnostics ready to save")
         }
         @Suppress("DEPRECATION")
         stopForeground(STOP_FOREGROUND_REMOVE)
