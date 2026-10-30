@@ -107,8 +107,8 @@ class FieldScreenRecorderService : Service() {
     }
 
     private fun startCapture(intent: Intent) {
+        // Duplicate start requests must not destroy an active capture service.
         if (started || state.phase == Phase.RECORDING || state.phase == Phase.STARTING) {
-            stopSelf()
             return
         }
         sessionId = intent.getStringExtra(EXTRA_SESSION).orEmpty()
