@@ -51,6 +51,9 @@ class FieldScreenRecorderService : Service() {
         private const val MAX_DURATION_MS = 10 * 60 * 1000
         private const val MAX_FILE_BYTES = 250L * 1024L * 1024L
 
+        @Volatile var telemetry: NavigationTelemetry? = null
+            private set
+
         @Volatile var state = RecordingState()
             private set
 
@@ -185,7 +188,9 @@ class FieldScreenRecorderService : Service() {
                 "NightRider Field Test", width, height, metrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 encoder.surface, null, Handler(Looper.getMainLooper()))
+            telemetry = NavigationTelemetry(this, sessionId)
             encoder.start()
+            telemetry?.event("video_start")
             started = true
             state = RecordingState(Phase.RECORDING, sessionId,
                 System.currentTimeMillis(), "Screen recording active; no audio")
@@ -205,6 +210,9 @@ class FieldScreenRecorderService : Service() {
         } catch (_: RuntimeException) {
             validVideo = false
         }
+        telemetry?.event("video_stop")
+        telemetry?.close(if (keepError || !validVideo) "capture_error" else "capture_stopped")
+        telemetry = null
         started = false
         try { display?.release() } catch (_: Exception) {}
         display = null

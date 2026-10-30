@@ -61,7 +61,7 @@ class VelaNavigationActivity : Activity(), LocationListener {
     private var rideBusy = false
     private var lastAttempt = Long.MIN_VALUE
     private var routingMessage = "Waiting for GPS"
-    private val trace = FieldTrace()
+    private var testPanel: NavigationTestPanel? = null
     private var lastRaw: Location? = null
     private val pulse = object : Runnable {
         override fun run() {
@@ -127,12 +127,12 @@ class VelaNavigationActivity : Activity(), LocationListener {
         summary = label(18f); gps = label(13f)
         root.addView(summary); root.addView(gps)
         if (test) {
-            root.addView(label(12f).apply { text = "Long-press map to set a destination. No ride changes." })
-            val row = LinearLayout(this)
-            row.addView(Button(this).apply { text = "Save GPS CSV"; setOnClickListener { exportCsv() } })
-            row.addView(Button(this).apply { text = "Route again"; setOnClickListener { requestRoute() } })
-            root.addView(row)
-            trace.start()
+            testPanel = NavigationTestPanel(this) {
+                val p = ChathamTestDestination.random()
+                setDestination(p, "Chatham County test pin", "${p.lat},${p.lng}")
+                FieldScreenRecorderService.telemetry?.event("destination",JSONObject().put("lat",p.lat).put("lng",p.lng))
+            }
+            root.addView(testPanel!!.view)
         }
         root.setPadding(0, 0, 0, dp(14))
         setContentView(root)
@@ -146,10 +146,6 @@ class VelaNavigationActivity : Activity(), LocationListener {
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
                     follow = false; render()
                 }
-            }
-            if (test) m.addOnMapLongClickListener { p ->
-                setDestination(VelaPoint(p.latitude, p.longitude), "Test destination", "${p.latitude},${p.longitude}")
-                true
             }
             m.cameraPosition = CameraPosition.Builder().target(LatLng(32.0811, -81.0911)).zoom(13.0).build()
             m.setStyle(if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
@@ -176,12 +172,14 @@ class VelaNavigationActivity : Activity(), LocationListener {
         startGps(); main.post(pulse)
     }
     override fun onPause() {
+        testPanel?.pause()
         active = false; main.removeCallbacks(pulse)
         try { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) } catch (_: Exception) {}
         mapView.onPause(); super.onPause()
     }
     override fun onStop() { mapView.onStop(); super.onStop() }
     override fun onDestroy() {
+        testPanel?.destroy()
         generation++; network.shutdownNow(); rides.shutdownNow(); main.removeCallbacksAndMessages(null)
         mapView.onDestroy(); super.onDestroy()
     }
@@ -212,15 +210,21 @@ class VelaNavigationActivity : Activity(), LocationListener {
     override fun onLocationChanged(value: Location) {
         if (!active) return
         lastRaw = Location(value)
-        if (test) trace.add(FieldFix(value.time, value.latitude, value.longitude,
-            if (value.hasAccuracy()) value.accuracy else 999f,
-            if (value.hasSpeed()) value.speed else 0f, value.provider ?: "unknown"))
         val events = session.accept(VelaDriveSession.Fix(VelaPoint(value.latitude, value.longitude),
             value.elapsedRealtimeNanos / 1_000_000,
             if (value.hasAccuracy()) value.accuracy.toDouble() else 999.0,
             if (value.hasSpeed()) value.speed.toDouble() else null,
             if (value.hasBearing()) value.bearing.toDouble() else null), SystemClock.elapsedRealtime())
-        if (test) trace.markDecision(value.time, events != null)
+        if (test) FieldScreenRecorderService.telemetry?.event("gps",JSONObject()
+            .put("fix_wall_ms",value.time).put("fix_elapsed_ns",value.elapsedRealtimeNanos)
+            .put("lat",value.latitude).put("lng",value.longitude).put("provider",value.provider)
+            .put("accuracy_m",if(value.hasAccuracy()) value.accuracy else null)
+            .put("speed_mps",if(value.hasSpeed()) value.speed else null)
+            .put("bearing_deg",if(value.hasBearing()) value.bearing else null)
+            .put("altitude_m",if(value.hasAltitude()) value.altitude else null)
+            .put("accepted",events != null).put("events",events?.toString())
+            .put("step",session.state.stepIndex).put("off_route",session.state.offRoute)
+            .put("arrived",session.state.arrived))
         if (events != null) {
             renderMarker(); center()
             if (events.any { it is NavEvent.RerouteNeeded } || (session.route == null && destination != null)) requestRoute()
@@ -260,6 +264,8 @@ class VelaNavigationActivity : Activity(), LocationListener {
         if (!active || routing || !session.fresh(now) ||
             (lastAttempt != Long.MIN_VALUE && now - lastAttempt < 15_000)) return
         routing = true; lastAttempt = now; val request = generation
+        if (test) FieldScreenRecorderService.telemetry?.event("route_request",
+            JSONObject().put("lat",target.lat).put("lng",target.lng))
         routingMessage = if (session.route == null) "Finding route…" else "Recalculating route…"
         render()
         network.execute {
@@ -270,16 +276,26 @@ class VelaNavigationActivity : Activity(), LocationListener {
                     conn.connectTimeout = 10000; conn.readTimeout = 15000
                     conn.setRequestProperty("User-Agent", "NightRiderDriver/Vela-navigation-prototype")
                     check(conn.responseCode in 200..299)
-                    VelaRouteAdapter.parse(JSONObject(conn.inputStream.bufferedReader().use { it.readText() }))
+                    val response = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                    if (test) {
+                        val end = response.getJSONArray("waypoints").getJSONObject(1)
+                        require(end.getDouble("distance") <= 100.0) { "Test pin is too far from a routable road" }
+                        val snap = VelaRouteAdapter.point(end.getJSONArray("location"))
+                        require(ChathamTestDestination.contains(snap)) { "Snapped destination left test area" }
+                    }
+                    VelaRouteAdapter.parse(response)
                 } finally { conn.disconnect() }
             }
             main.post {
                 if (isFinishing || isDestroyed || request != generation) return@post
                 routing = false
                 result.onSuccess {
+                    if (test) FieldScreenRecorderService.telemetry?.event("route_success",JSONObject()
+                        .put("distance_m",it.distanceMeters).put("duration_s",it.durationSeconds)
+                        .put("geometry",JSONArray(it.polyline.map { p -> listOf(p.lat,p.lng) })))
                     session.adopt(it); routingMessage = "OSRM · no live traffic"; renderRoute()
                     // The next fresh location advances Vela's engine; never replay a stale fix as new.
-                }.onFailure { routingMessage = "Route unavailable · retrying when GPS is fresh" }
+                }.onFailure { if (test) FieldScreenRecorderService.telemetry?.event("route_failure",JSONObject().put("error",it.message)); routingMessage = "Route unavailable · retrying when GPS is fresh" }
                 render()
             }
         }
@@ -308,6 +324,8 @@ class VelaNavigationActivity : Activity(), LocationListener {
         val fix = session.lastFix ?: return
         val speed = fix.speedMps ?: 0.0
         val zoom = when { speed >= 25 -> 15.5; speed >= 15 -> 16.0; else -> 17.0 }
+        if (test) FieldScreenRecorderService.telemetry?.event("camera",JSONObject()
+            .put("lat",fix.point.lat).put("lng",fix.point.lng).put("zoom",zoom).put("bearing",session.heading))
         map?.easeCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
             .target(LatLng(fix.point.lat,fix.point.lng)).zoom(zoom).bearing(session.heading).tilt(0.0).build()), 700)
     }
@@ -337,23 +355,12 @@ class VelaNavigationActivity : Activity(), LocationListener {
         val raw = lastRaw
         gps.text = (if (fix == null) "No precise fix yet" else if (fresh) "GPS ±${fix.accuracyM.toInt()} m" else "Last accepted GPS: ${age}s ago") +
             (if (raw != null && raw.hasAccuracy() && raw.accuracy > 50) " · coarse ${raw.provider} fix ignored" else "") +
-            "\n$routingMessage" + (if (test) " · ${trace.samples.size} samples recorded" else "")
+            "\n$routingMessage"
         marker?.let { it.title = if (fresh) "Your position" else "Last known position · ${age}s old"; map?.updateMarker(it) }
         followButton.text = if (follow) "Following" else "Recenter"
     }
-    private fun exportCsv() {
-        startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"
-            putExtra(Intent.EXTRA_TITLE,"nightrider-vela-${System.currentTimeMillis()}.csv")
-        },702)
-    }
-    @Deprecated("Legacy document callback") override fun onActivityResult(code: Int, result: Int, data: Intent?) {
+    @Deprecated("Activity result callback") override fun onActivityResult(code: Int, result: Int, data: Intent?) {
         super.onActivityResult(code,result,data)
-        if (code == 702 && result == RESULT_OK) data?.data?.let { uri ->
-            try {
-                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(trace.csv()) }
-                Toast.makeText(this,"GPS CSV saved",Toast.LENGTH_SHORT).show()
-            } catch (_: Exception) { Toast.makeText(this,"Could not save CSV",Toast.LENGTH_LONG).show() }
-        }
+        testPanel?.result(code,result,data)
     }
 }
