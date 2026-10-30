@@ -96,6 +96,29 @@ class VelaNavigationActivity : Activity(), LocationListener {
             setOnClickListener { follow = true; center(); render() }
         }
         tools.addView(followButton)
+        if (test) {
+            val palette = Button(this)
+            fun updatePaletteLabel() {
+                palette.text = if (prefs.aeroEnabled) "DARK map" else "LIGHT map"
+            }
+            updatePaletteLabel()
+            palette.setOnClickListener {
+                prefs.aeroEnabled = !prefs.aeroEnabled
+                updatePaletteLabel()
+                val m = map ?: return@setOnClickListener
+                m.setStyle(if (prefs.aeroEnabled) "https://tiles.openfreemap.org/styles/fiord"
+                    else "https://tiles.openfreemap.org/styles/dark") { style ->
+                    if (!isFinishing && !isDestroyed) {
+                        VelaMapAppearance.apply(style, prefs.aeroEnabled)
+                        marker = null
+                        destinationMarker = null
+                        routeLines.clear()
+                        renderRoute(); renderMarker(); center()
+                    }
+                }
+            }
+            tools.addView(palette)
+        }
         root.addView(tools)
         title = label(14f); instruction = label(22f)
         root.addView(title); root.addView(instruction)
