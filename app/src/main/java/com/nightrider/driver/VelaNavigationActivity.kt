@@ -128,11 +128,15 @@ class VelaNavigationActivity : Activity(), LocationListener {
         summary = label(18f); gps = label(13f)
         root.addView(summary); root.addView(gps)
         if (test) {
-            testPanel = NavigationTestPanel(this) {
+            testPanel = NavigationTestPanel(this, begin = {
+                startGps()
                 val p = ChathamTestDestination.random()
                 setDestination(p, "Chatham County test pin", "${p.lat},${p.lng}")
                 FieldScreenRecorderService.telemetry?.event("destination",JSONObject().put("lat",p.lat).put("lng",p.lng))
-            }
+            }, ended = {
+                generation++; routing = false
+                try { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) } catch (_: Exception) {}
+            })
             root.addView(testPanel!!.view)
         }
         root.setPadding(0, 0, 0, dp(14))
@@ -170,7 +174,8 @@ class VelaNavigationActivity : Activity(), LocationListener {
     override fun onResume() {
         super.onResume(); mapView.onResume(); active = true
         if (!test && !prefs.loggedIn) { finish(); return }
-        startGps(); main.post(pulse)
+        if (!test || testPanel?.isRecording == true) startGps()
+        main.post(pulse)
     }
     override fun onPause() {
         testPanel?.pause()
@@ -204,12 +209,14 @@ class VelaNavigationActivity : Activity(), LocationListener {
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, permissions, results)
         if (code == 701 && active) {
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) startGps()
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                if (!test || testPanel?.isRecording == true) startGps()
+            }
             else { routingMessage = "Precise location is required for navigation"; render() }
         }
     }
     override fun onLocationChanged(value: Location) {
-        if (!active) return
+        if (!active || (test && testPanel?.isRecording != true)) return
         lastRaw = Location(value)
         val events = session.accept(VelaDriveSession.Fix(VelaPoint(value.latitude, value.longitude),
             value.elapsedRealtimeNanos / 1_000_000,
@@ -262,7 +269,7 @@ class VelaNavigationActivity : Activity(), LocationListener {
         val target = destination ?: return
         val fix = session.lastFix ?: return
         val now = SystemClock.elapsedRealtime()
-        if (!active || routing || !session.fresh(now) ||
+        if (!active || (test && testPanel?.isRecording != true) || routing || !session.fresh(now) ||
             (lastAttempt != Long.MIN_VALUE && now - lastAttempt < 15_000)) return
         routing = true; lastAttempt = now; val request = generation
         if (test) FieldScreenRecorderService.telemetry?.event("route_request",

@@ -13,12 +13,13 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /** One control for the capture session; saving uses an explicit Android document picker. */
-class NavigationTestPanel(private val activity: Activity, private val begin: () -> Unit) {
+class NavigationTestPanel(private val activity: Activity, private val begin: () -> Unit, private val ended: () -> Unit) {
     private val handler = Handler(Looper.getMainLooper())
     private var id = ""
     private var waiting = false
     private var starting = false
     private var running = false
+    val isRecording: Boolean get() = running
     private var stopping = false
     private var exporting = false
     private var startAt = 0L
@@ -108,6 +109,7 @@ class NavigationTestPanel(private val activity: Activity, private val begin: () 
     }
     fun stop(reason: String) {
         if (!running && !starting) return
+        ended()
         FieldScreenRecorderService.telemetry?.event(reason)
         FieldScreenRecorderService.requestStop(activity)
         starting = false; running = false; stopping = true
@@ -121,6 +123,7 @@ class NavigationTestPanel(private val activity: Activity, private val begin: () 
                 starting = false; running = true; begin()
             }
             if (state.phase == FieldScreenRecorderService.Phase.READY || state.phase == FieldScreenRecorderService.Phase.ERROR) {
+                if (running || starting) ended()
                 if (running || starting || stopping) status.text = state.message
                 running = false; starting = false; stopping = false
             }
