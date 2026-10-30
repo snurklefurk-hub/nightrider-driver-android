@@ -32,7 +32,8 @@ class VelaNavigationSmokeTest {
                     }
                     val visible = texts(activity.window.decorView).joinToString("\n")
                     assertTrue(visible.contains("VELA · TEST"))
-                    assertTrue(visible.contains("Save GPS CSV"))
+                    assertTrue(visible.contains("Start test"))
+                    assertTrue(visible.contains("Save test ZIP"))
                     assertTrue(visible.contains("Speed unavailable") || visible.contains("mph"))
                     activity.finish()
                 }

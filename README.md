@@ -76,11 +76,7 @@ sky blue/green controls and rounded humanist type) or **DARK** (the original
 NightRider Verdant styling). DARK remains the default and the choice persists
 on this device without changing the signed-in session or ride state.
 
-The embedded driver map, simulator and GPS Field Test follow this setting,
-with a road-contrast palette tuned for the driver view. There is no separate
-map style switch. The standalone **Map Preview** test app has its own local
-setting: LIGHT selects NightRider Midnight and DARK selects OpenFreeMap
-Original Dark.
+The Vela test screen has a direct LIGHT/DARK map switch using the approved custom palettes.
 
 ## Driver map and testing
 
@@ -90,19 +86,14 @@ Assigned rides route to pickup; the existing to_dropoff stage switches to the de
 Navigation never changes ride stages, sends chat, or modifies assignments.
 
 **Settings → Vela navigation test (live GPS)** opens the new screen without an account.
-Long-press a destination, then use Save GPS CSV to export raw samples and map acceptance decisions.
-Precise GPS is required; coarse/old fixes do not move the navigation state. A stale accepted
-position stays visible with its age and speed becomes unavailable. Heading remains fixed
-when stopped. Guidance only runs while this screen is open; leaving it stops GPS updates.
+Press Start test and accept Android screen capture consent. A random pin in an inland Savannah test area of Chatham County, Georgia is selected; OSRM must find a road within 100 metres. Stop test ends screen and sensor collection. Save test ZIP exports the paired MP4 and timestamped JSONL diagnostics. All data stays on-device until you export it. Screen capture has a ten-minute limit. Leaving the screen stops the session; missing session_end indicates an interrupted recording. Interact only while safely parked.
 
 Routes use the free OSRM demonstration service and OpenFreeMap tiles. Directions have no
 live traffic. No Google lookups, audio, microphone, offline downloads or background navigation
 service are included in this initial integration. This is Vela's navigation **engine**, with
 a native NightRider map screen; Vela's full Compose interface is not embedded.
 
-The old simulator and screen-recording Field Test are explicitly labeled **Legacy** in Settings
-and remain available for comparing earlier GPS evidence. They are not the new navigation screen.
-See [NAVIGATION-VELA.md](NAVIGATION-VELA.md) for provenance, boundaries and validation.
+Legacy map screens and simulator entry points have been removed. The shared road style and marker remain in use by Vela.
 
 ## Next implementation priorities
 
@@ -113,8 +104,7 @@ These are planned changes, not capabilities of the current signed release.
 ## Build from source
 
 The Android workflows install Java 17 and Gradle 8.7. Android Studio is
-optional. Both the production driver module and the separate `nav-prototype/`
-appearance preview use the pinned MapLibre Android SDK.
+optional. The production driver module uses the pinned MapLibre Android SDK.
 
 Run `python -m unittest discover -s tests -p 'test_*.py' -v` for source/package
 checks and `gradle :vela-engine:test testDebugUnitTest assembleDebug` for the Kotlin unit tests

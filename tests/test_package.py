@@ -126,32 +126,6 @@ class LauncherIconTests(unittest.TestCase):
 
 
 
-class MapPreviewIsolationTests(unittest.TestCase):
-    """Keep the experimental vector Map Lab out of the signed driver app."""
-
-    def test_preview_uses_a_different_application_id(self):
-        with open(p("nav-prototype", "prototype", "build.gradle"),
-                  encoding="utf-8") as fh:
-            build = fh.read()
-        self.assertIn("applicationId 'com.nightrider.navpreview'", build)
-        self.assertNotIn("applicationId 'com.nightrider.driver'", build)
-
-    def test_preview_manifest_does_not_request_driver_privileges(self):
-        manifest = ET.parse(p("nav-prototype", "prototype", "src",
-                              "main", "AndroidManifest.xml")).getroot()
-        declared = {item.get(ANDROID + "name") for item in
-                    manifest.iter("uses-permission")}
-        self.assertIn("android.permission.INTERNET", declared)
-        for permission in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION",
-                           "ACCESS_BACKGROUND_LOCATION", "REQUEST_INSTALL_PACKAGES",
-                           "WAKE_LOCK"):
-            self.assertNotIn("android.permission." + permission, declared)
-        app = manifest.find("application")
-        self.assertEqual(app.get(ANDROID + "allowBackup"), "false")
-
-
-
-
 class AeroThemeTests(unittest.TestCase):
     def test_aero_theme_is_optional_and_uses_separate_resources(self):
         with open(p("app", "src", "main", "res", "values", "themes.xml"),
@@ -182,16 +156,6 @@ class AeroThemeTests(unittest.TestCase):
         self.assertIn('android:id="@+id/appearanceToggle"', layout)
         self.assertNotIn('android:id="@+id/appearanceMode"', layout)
         self.assertNotIn('android:id="@+id/aeroTheme"', layout)
-        with open(p("nav-prototype", "prototype", "src", "main", "java",
-                    "com", "nightrider", "navpreview", "PreviewActivity.kt"),
-                  encoding="utf-8") as fh:
-            preview = fh.read()
-        self.assertIn('listOf("LIGHT", "DARK")', preview)
-        self.assertIn('selectStyle(if (aeroUi) 0 else 1)', preview)
-        self.assertNotIn('putString("map_mode"', preview)
-        self.assertNotIn('"Aero UI"', preview)
-        self.assertNotIn('"Classic UI"', preview)
-        self.assertIn('Typeface.create("sans-serif-rounded"', preview)
         with open(p("app", "src", "main", "res", "values", "themes.xml"),
                   encoding="utf-8") as fh:
             themes = fh.read()

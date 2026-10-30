@@ -126,22 +126,6 @@
             android:layout_marginTop="20dp"
             android:text="Vela navigation test (live GPS)" />
 
-        <Button
-            android:id="@+id/mapSimulator"
-            style="@style/NrButton.Alt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Legacy map simulator" />
-
-        <Button
-            android:id="@+id/mapFieldTest"
-            style="@style/NrButton.Alt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Legacy field test (screen recording)" />
-
         <CheckBox
             android:id="@+id/keepAwake"
             android:layout_width="match_parent"
