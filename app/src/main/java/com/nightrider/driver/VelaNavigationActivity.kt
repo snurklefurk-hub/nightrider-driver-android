@@ -111,8 +111,13 @@ class VelaNavigationActivity : Activity(), LocationListener {
                     else "https://tiles.openfreemap.org/styles/dark") { style ->
                     if (!isFinishing && !isDestroyed) {
                         VelaMapAppearance.apply(style, prefs.aeroEnabled)
+                        // Legacy annotations survive style reloads. Remove them before
+                        // discarding handles so palette changes cannot strand an old arrow.
+                        marker?.let { m.removeMarker(it) }
                         marker = null
+                        destinationMarker?.let { m.removeMarker(it) }
                         destinationMarker = null
+                        routeLines.forEach { m.removePolyline(it) }
                         routeLines.clear()
                         renderRoute(); renderMarker(); center()
                     }
